@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-zinc-950 text-zinc-200 antialiased;
+  font-family:
+    "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+/* Thin dark scrollbars everywhere */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(63 63 70) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgb(63 63 70);
+  border-radius: 4px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---- markdown body ---- */
+.md > * + * {
+  margin-top: 0.55em;
+}
+.md h1,
+.md h2,
+.md h3,
+.md h4 {
+  @apply font-semibold text-zinc-100;
+  margin-top: 1em;
+}
+.md h1 {
+  font-size: 1.25rem;
+}
+.md h2 {
+  font-size: 1.15rem;
+}
+.md h3 {
+  font-size: 1.05rem;
+}
+.md ul {
+  @apply list-disc pl-5;
+}
+.md ol {
+  @apply list-decimal pl-5;
+}
+.md li + li {
+  margin-top: 0.15em;
+}
+.md blockquote {
+  @apply border-l-2 border-zinc-700 pl-3 text-zinc-400;
+}
+.md hr {
+  @apply border-zinc-800;
+}
+.md table {
+  @apply w-full border-collapse text-[13px];
+}
+.md th,
+.md td {
+  @apply border border-zinc-800 px-2 py-1 text-left;
+}
+.md th {
+  @apply bg-zinc-900 font-medium;
+}
+.codeblock > pre {
+  background: #0d1117 !important;
+}

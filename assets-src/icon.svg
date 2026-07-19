@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect x="0" y="0" width="1024" height="1024" rx="216" fill="#101013"/>
+  <rect x="8" y="8" width="1008" height="1008" rx="208" fill="none" stroke="#26262b" stroke-width="6"/>
+  <!-- reticle ticks -->
+  <rect x="488" y="84" width="48" height="118" rx="20" fill="#22d3ee"/>
+  <rect x="488" y="822" width="48" height="118" rx="20" fill="#22d3ee"/>
+  <rect x="84" y="488" width="118" height="48" rx="20" fill="#22d3ee"/>
+  <rect x="822" y="488" width="118" height="48" rx="20" fill="#22d3ee"/>
+  <!-- scope ring -->
+  <circle cx="512" cy="512" r="318" fill="none" stroke="#22d3ee" stroke-width="46"/>
+  <!-- iris -->
+  <circle cx="512" cy="512" r="208" fill="#6d28d9"/>
+  <circle cx="512" cy="512" r="208" fill="url(#shade)"/>
+  <radialGradient id="shade" cx="38%" cy="30%" r="85%">
+    <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.55"/>
+    <stop offset="55%" stop-color="#6d28d9" stop-opacity="0"/>
+    <stop offset="100%" stop-color="#1e1033" stop-opacity="0.5"/>
+  </radialGradient>
+  <!-- pupil -->
+  <circle cx="512" cy="512" r="86" fill="#0a0a0d"/>
+  <!-- glint -->
+  <circle cx="452" cy="438" r="34" fill="#ffffff" opacity="0.92"/>
+  <circle cx="566" cy="586" r="16" fill="#ffffff" opacity="0.5"/>
+</svg>
