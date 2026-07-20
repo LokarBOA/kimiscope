@@ -306,4 +306,26 @@ describe('interrupted tool calls', () => {
     )
     expect(useApp.getState().sessionState[SID].toolCalls.c1.status).toBe('interrupted')
   })
+
+  it('prependMessages rebuilds tool records from older pages (and interrupts zombies)', () => {
+    const st = useApp.getState()
+    st.applyFrame(frame('turn.started', { agentId: 'main', turnId: 1 })) // materialize session
+    st.applyFrame(frame('prompt.completed', { agentId: 'main' })) // idle
+    const msgs = [
+      {
+        id: 'm1',
+        role: 'assistant',
+        content: [
+          { type: 'tool_use', tool_call_id: 'c1', tool_name: 'ReadMediaFile', input: {} },
+          { type: 'tool_result', tool_call_id: 'c1', output: [{ type: 'image_url' }], is_error: false },
+          { type: 'tool_use', tool_call_id: 'c2', tool_name: 'Bash', input: {} },
+        ],
+      } as never,
+    ]
+    st.prependMessages(SID, msgs as never, false)
+    const tc = useApp.getState().sessionState[SID].toolCalls
+    expect(tc.c1.status).toBe('done')
+    expect(Array.isArray(tc.c1.output)).toBe(true)
+    expect(tc.c2.status).toBe('interrupted')
+  })
 })

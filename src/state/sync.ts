@@ -74,6 +74,7 @@ export async function initApp(): Promise<void> {
   sessionPoll = setInterval(() => {
     void refreshSessions()
     void refreshWorkspaces()
+    void pollTaskCompletions()
   }, 10_000)
 
   // Prompt queues for every watched session, fast enough to feel live.
@@ -143,8 +144,16 @@ function handleFrame(f: Frame) {
   if (/(approval|question)\./.test(t) && f.session_id) {
     void refreshInteractions(f.session_id)
   }
-  if (/^task\./.test(t) && f.session_id) {
+  if (/^(task|background\.task)\./.test(t) && f.session_id) {
     void refreshTasks(f.session_id)
+  }
+  // Completion badge: a task finished in a session you're not looking at.
+  if ((t === 'task.terminated' || t === 'background.task.terminated') && f.session_id) {
+    const st = useApp.getState()
+    if (st.activeSessionId !== f.session_id) {
+      const title = st.sessionState[f.session_id]?.summary?.title ?? 'another session'
+      void notifyAttention(`background task finished — ${title.slice(0, 40)}`)
+    }
   }
   if (t === 'goal.updated' && f.session_id) {
     void refreshGoal(f.session_id)
@@ -401,6 +410,48 @@ export async function refreshTasks(id: string): Promise<void> {
     useApp.getState().setTasks(id, res.items ?? [])
   } catch {
     // daemon hiccup
+  }
+}
+
+/** Fetch one task's detail (carries `output_preview` for the log tail). */
+export async function getTaskDetail(id: string, taskId: string): Promise<TaskItem | null> {
+  try {
+    return await get<TaskItem>(`/sessions/${id}/tasks/${taskId}`)
+  } catch {
+    return null
+  }
+}
+
+/** Per-session task status from the last poll — detects completions for
+ *  sessions we are NOT subscribed to (unwatched sessions get no frames). */
+const prevTaskStatus = new Map<string, Map<string, string>>()
+
+/** Poll /tasks across listed sessions; a running→terminal transition in an
+ *  unwatched session raises the completion badge + a taskbar notification.
+ *  (Watched sessions get instant frames via handleFrame instead.) */
+async function pollTaskCompletions(): Promise<void> {
+  const st = useApp.getState()
+  const listed = st.sessions.filter((s) => !s.archived).slice(0, 30)
+  for (const s of listed) {
+    let items: TaskItem[]
+    try {
+      const res = await get<{ items: TaskItem[] }>(`/sessions/${s.id}/tasks`)
+      items = res.items ?? []
+    } catch {
+      continue
+    }
+    const prev = prevTaskStatus.get(s.id) ?? new Map<string, string>()
+    const cur = new Map<string, string>()
+    for (const t of items) {
+      cur.set(t.id, t.status)
+      if (prev.get(t.id) === 'running' && t.status !== 'running' && !watching.has(s.id)) {
+        useApp.getState().markTaskDone(s.id)
+        if (st.activeSessionId !== s.id) {
+          void notifyAttention(`background task ${t.status} — ${(s.title ?? 'another session').slice(0, 40)}`)
+        }
+      }
+    }
+    prevTaskStatus.set(s.id, cur)
   }
 }
 

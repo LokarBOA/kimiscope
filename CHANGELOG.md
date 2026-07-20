@@ -4,8 +4,15 @@
 
 ### Added
 
+- **Image tool results render inline** — `ReadMediaFile`-style results (content-block arrays with `image_url` data URLs) show as thumbnails directly in the tool card; click to expand full width. Lazy-loaded so image-heavy histories stay light.
+- **Background-task log tails + completion badges** — task rows in the InsightRail expand to a live `output_preview` tail (polls while running); a task finishing in a session you're not watching raises a taskbar notification and a ✓ badge on its sidebar row (10s `/tasks` polling for unwatched sessions, instant frames for watched ones).
+- **Project presence indicator** — workspace headers show `⚡N` when N sessions are mid-turn on that working tree (tooltip lists them) — a clobber warning for shared repos.
 - **MCP staleness hint** — Settings compares `mcp.json`'s mtime against the daemon's `started_at` (read from the server lock) and shows "mcp.json changed since the daemon started — restart to apply" with a restart button when they diverge (from laptop-agent field feedback).
 - **Interrupted tool calls render as such** — a main-agent call left `running` with no result when the turn ends (crash, abort, daemon restart) is marked `interrupted` (amber) in the store and the tool card, instead of pulsing forever. Aborted calls that recorded a result still show `error`.
+
+### Fixed
+
+- `prependMessages` now rebuilds tool records from older pages — previously, cards on any page loaded via "Load earlier" rendered as forever-running fallbacks with no output (also the source of zombie running cards on long histories).
 
 ## v0.1.1
 

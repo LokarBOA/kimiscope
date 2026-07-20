@@ -74,6 +74,8 @@ export interface SessionState {
   outbox: OutboxItem[]
   hasMore: boolean
   skills: SkillInfo[]
+  /** Timestamp of the latest background-task completion (drives the sidebar badge). */
+  recentTaskDone: number | null
 }
 
 const emptyStreaming = (): StreamingState => ({
@@ -104,6 +106,7 @@ const emptySession = (): SessionState => ({
   outbox: [],
   hasMore: false,
   skills: [],
+  recentTaskDone: null,
 })
 
 /** Main-agent tool calls left `running` with no result once the turn is over
@@ -205,6 +208,7 @@ interface AppState {
   addToOutbox: (id: string, item: OutboxItem) => void
   clearOutbox: (id: string, localId?: string) => void
   setSkills: (id: string, skills: SkillInfo[]) => void
+  markTaskDone: (id: string) => void
 }
 
 export const useApp = create<AppState>((set) => ({
@@ -289,10 +293,49 @@ export const useApp = create<AppState>((set) => ({
       const prev = st.sessionState[id] ?? emptySession()
       const existing = new Set(prev.messages.map((m) => m.id))
       const fresh = msgs.filter((m) => !existing.has(m.id))
+      // Older pages carry tool blocks that never became records — rebuild them
+      // too, or old cards render as forever-running fallbacks with no output.
+      const toolCalls = { ...prev.toolCalls }
+      for (const m of fresh) {
+        for (const b of m.content ?? []) {
+          if (b.type === 'tool_use') {
+            const tb = b as { tool_call_id: string; tool_name: string; input: unknown }
+            toolCalls[tb.tool_call_id] ??= {
+              toolCallId: tb.tool_call_id,
+              name: tb.tool_name,
+              args: tb.input,
+              status: 'running',
+            }
+          }
+          if (b.type === 'tool_result') {
+            const tb = b as { tool_call_id: string; output: unknown; is_error?: boolean }
+            const rec = toolCalls[tb.tool_call_id]
+            if (rec && rec.output === undefined) {
+              toolCalls[tb.tool_call_id] = {
+                ...rec,
+                output: tb.output,
+                isError: tb.is_error,
+                status: tb.is_error ? 'error' : 'done',
+              }
+            }
+          }
+        }
+      }
+      if (!prev.busy) {
+        for (const rec of Object.values(toolCalls)) {
+          if (
+            (rec.agentId ?? 'main') === 'main' &&
+            rec.status === 'running' &&
+            rec.output === undefined
+          ) {
+            toolCalls[rec.toolCallId] = { ...rec, status: 'interrupted' }
+          }
+        }
+      }
       return {
         sessionState: {
           ...st.sessionState,
-          [id]: { ...prev, messages: [...fresh, ...prev.messages], hasMore },
+          [id]: { ...prev, messages: [...fresh, ...prev.messages], toolCalls, hasMore },
         },
       }
     }),
@@ -451,6 +494,14 @@ export const useApp = create<AppState>((set) => ({
       sessionState: {
         ...st.sessionState,
         [id]: { ...(st.sessionState[id] ?? emptySession()), skills },
+      },
+    })),
+
+  markTaskDone: (id) =>
+    set((st) => ({
+      sessionState: {
+        ...st.sessionState,
+        [id]: { ...(st.sessionState[id] ?? emptySession()), recentTaskDone: Date.now() },
       },
     })),
 
@@ -750,6 +801,11 @@ export const useApp = create<AppState>((set) => ({
         case 'approval.resolved': {
           const apId = p.approval_id ?? p.approvalId
           if (apId) next.approvals = next.approvals.filter((a) => a.approval_id !== apId)
+          break
+        }
+        case 'task.terminated':
+        case 'background.task.terminated': {
+          next.recentTaskDone = Date.now()
           break
         }
         case 'question.answered':

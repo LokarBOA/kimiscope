@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { useApp } from '../state/store'
-import { goalControl, goalCreate } from '../state/sync'
-import type { GoalState, TodoItem, ToolCallRecord } from '../api/events'
+import { getTaskDetail, goalControl, goalCreate } from '../state/sync'
+import type { GoalState, TaskItem, TodoItem, ToolCallRecord } from '../api/events'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -11,6 +11,70 @@ function Section({ title, children }: { title: string; children: React.ReactNode
         {title}
       </div>
       {children}
+    </div>
+  )
+}
+
+/** One background task row; expands to show the live log tail (output_preview). */
+function TaskRow({ sessionId, task }: { sessionId: string; task: TaskItem }) {
+  const [open, setOpen] = useState(false)
+  const [detail, setDetail] = useState<TaskItem | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    let stop = false
+    const pull = () =>
+      void getTaskDetail(sessionId, task.id).then((d) => {
+        if (!stop && d) setDetail(d)
+      })
+    pull()
+    // Keep the tail fresh while the task is still producing output.
+    const iv = task.status === 'running' ? setInterval(pull, 4000) : null
+    return () => {
+      stop = true
+      if (iv) clearInterval(iv)
+    }
+  }, [open, sessionId, task.id, task.status])
+
+  const dot =
+    task.status === 'running'
+      ? 'animate-pulse bg-sky-400'
+      : task.status === 'completed'
+        ? 'bg-emerald-500'
+        : task.status === 'failed'
+          ? 'bg-red-500'
+          : 'bg-zinc-600'
+
+  return (
+    <div className="py-0.5">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-2 text-left text-[12px] hover:text-zinc-200"
+        title={task.command ?? task.id}
+      >
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
+        <span className="min-w-0 flex-1 truncate text-zinc-400">{task.description ?? task.id}</span>
+        {task.exit_code !== undefined && (
+          <span className="shrink-0 text-zinc-600">exit {task.exit_code}</span>
+        )}
+        <span className="shrink-0 text-zinc-600">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && (
+        <div className="mt-1 ml-3.5">
+          {detail?.output_preview ? (
+            <pre className="max-h-40 overflow-y-auto rounded bg-zinc-900 p-2 text-[11px] whitespace-pre-wrap text-zinc-500">
+              {detail.output_preview}
+            </pre>
+          ) : (
+            <div className="text-[11px] text-zinc-600">
+              {detail ? 'No output captured.' : 'Loading…'}
+            </div>
+          )}
+          {detail?.stop_reason && (
+            <div className="mt-0.5 text-[11px] text-zinc-600">{detail.stop_reason}</div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -191,22 +255,7 @@ export function InsightRail({ sessionId }: { sessionId: string }) {
         {s.tasks.length === 0 ? (
           <div className="text-xs text-zinc-600">No background tasks.</div>
         ) : (
-          s.tasks.slice(0, 8).map((t) => (
-            <div key={t.id} className="flex items-center gap-2 py-0.5 text-[12px]" title={t.command ?? t.id}>
-              <span
-                className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                  t.status === 'running'
-                    ? 'animate-pulse bg-sky-400'
-                    : t.status === 'completed'
-                      ? 'bg-emerald-500'
-                      : t.status === 'failed'
-                        ? 'bg-red-500'
-                        : 'bg-zinc-600'
-                }`}
-              />
-              <span className="min-w-0 truncate text-zinc-400">{t.description ?? t.id}</span>
-            </div>
-          ))
+          s.tasks.slice(0, 8).map((t) => <TaskRow key={t.id} sessionId={sessionId} task={t} />)
         )}
       </Section>
 

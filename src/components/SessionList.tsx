@@ -18,6 +18,9 @@ function SessionRow({ s }: { s: SessionSummary }) {
   const busy = live?.busy ?? s.busy
   const pending = (live?.pendingInteraction ?? s.pending_interaction) !== 'none'
   const archived = s.archived === true
+  // Completion badge: a background task finished recently in a session you're not viewing.
+  const showDoneBadge =
+    !archived && live?.recentTaskDone != null && Date.now() - live.recentTaskDone < 15 * 60_000 && s.id !== activeId
 
   return (
     <div
@@ -46,6 +49,11 @@ function SessionRow({ s }: { s: SessionSummary }) {
         <span className="min-w-0 flex-1 truncate text-[13px] text-zinc-200">
           {s.title || 'Untitled'}
         </span>
+        {showDoneBadge && (
+          <span title="Background task finished" className="shrink-0 text-[11px] text-emerald-400">
+            ✓
+          </span>
+        )}
         {archived ? (
           <span className="shrink-0 text-[10px] text-zinc-600 uppercase">archived</span>
         ) : (
@@ -115,6 +123,7 @@ function OpenFolder() {
 export function SessionList() {
   const sessions = useApp((st) => st.sessions)
   const workspaces = useApp((st) => st.workspaces)
+  const sessionStates = useApp((st) => st.sessionState)
   const showArchived = useApp((st) => st.showArchived)
   const setShowArchived = useApp((st) => st.setShowArchived)
 
@@ -158,25 +167,39 @@ export function SessionList() {
         </button>
       </div>
       <div className="flex-1 overflow-y-auto p-1.5">
-        {groups.map(({ workspace, id, sessions: list }) => (
-          <div key={id} className="mb-2">
-            <div className="group flex items-center gap-1.5 px-1.5 pt-1.5 pb-1">
-              <span className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-wide text-zinc-500 uppercase">
-                {workspace?.name ?? id}
-              </span>
-              <button
-                onClick={() => workspace && void newSession(workspace.root)}
-                title={`New session in ${workspace?.name ?? id}`}
-                className="rounded px-1 text-sm text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-800 hover:text-zinc-200"
-              >
-                +
-              </button>
+        {groups.map(({ workspace, id, sessions: list }) => {
+          // Presence: other sessions mid-turn on this working tree (clobber warning).
+          const busyTitles = list
+            .filter((s) => !s.archived && (sessionStates[s.id]?.busy ?? s.busy))
+            .map((s) => s.title || 'Untitled')
+          return (
+            <div key={id} className="mb-2">
+              <div className="group flex items-center gap-1.5 px-1.5 pt-1.5 pb-1">
+                <span className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-wide text-zinc-500 uppercase">
+                  {workspace?.name ?? id}
+                </span>
+                {busyTitles.length > 0 && (
+                  <span
+                    title={`Active in this project: ${busyTitles.join(', ')}`}
+                    className="shrink-0 text-[10px] text-sky-400/90"
+                  >
+                    ⚡{busyTitles.length}
+                  </span>
+                )}
+                <button
+                  onClick={() => workspace && void newSession(workspace.root)}
+                  title={`New session in ${workspace?.name ?? id}`}
+                  className="rounded px-1 text-sm text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-800 hover:text-zinc-200"
+                >
+                  +
+                </button>
+              </div>
+              {list.map((s) => (
+                <SessionRow key={s.id} s={s} />
+              ))}
             </div>
-            {list.map((s) => (
-              <SessionRow key={s.id} s={s} />
-            ))}
-          </div>
-        ))}
+          )
+        })}
         {groups.length === 0 && (
           <div className="p-4 text-center text-sm text-zinc-600">No sessions yet</div>
         )}

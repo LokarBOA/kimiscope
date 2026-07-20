@@ -22,6 +22,23 @@ function fmtOutput(output: unknown): string {
   }
 }
 
+/** Image blocks inside a tool result (ReadMediaFile et al. return content-block
+ *  arrays with `image_url` entries carrying data URLs). */
+function extractResultImages(output: unknown): string[] {
+  if (!Array.isArray(output)) return []
+  const urls: string[] = []
+  for (const b of output as Record<string, unknown>[]) {
+    if (b?.type === 'image_url') {
+      const u = (b.imageUrl as { url?: unknown } | undefined)?.url
+      if (typeof u === 'string' && u) urls.push(u)
+    } else if (b?.type === 'image') {
+      const u = (b.source as { url?: unknown } | undefined)?.url
+      if (typeof u === 'string' && u) urls.push(u)
+    }
+  }
+  return urls
+}
+
 const ICONS: Record<string, string> = {
   Bash: '›_',
   Read: '📄',
@@ -130,11 +147,13 @@ export function ToolCard({
   allCalls?: Record<string, ToolCallRecord>
 }) {
   const [open, setOpen] = useState(false)
+  const [fullImage, setFullImage] = useState<number | null>(null)
   const isBash = call.name === 'Bash' || call.display?.kind === 'command'
   const isEdit = call.name === 'Edit'
   const isWrite = call.name === 'Write'
   const cmd = call.display?.command ?? (isBash ? (call.args as { command?: string })?.command : undefined)
   const output = fmtOutput(call.output) || call.progressText || ''
+  const resultImages = extractResultImages(call.output)
 
   const dot =
     call.status === 'running'
@@ -221,6 +240,23 @@ export function ToolCard({
         <div className="border-t border-zinc-800/60 px-3 py-2">
           {linkedSubs.map((s) => (
             <SubagentPanel key={s.subagentId} sub={s} allCalls={allCalls} />
+          ))}
+        </div>
+      )}
+      {resultImages.length > 0 && (
+        <div className="flex flex-wrap gap-2 border-t border-zinc-800/60 px-3 py-2">
+          {resultImages.map((url, i) => (
+            <img
+              key={i}
+              src={url}
+              alt="tool result"
+              loading="lazy"
+              onClick={() => setFullImage((v) => (v === i ? null : i))}
+              title={fullImage === i ? 'Click to shrink' : 'Click to expand'}
+              className={`cursor-zoom-in rounded-md border border-zinc-700 object-contain ${
+                fullImage === i ? 'w-full' : 'max-h-64'
+              }`}
+            />
           ))}
         </div>
       )}

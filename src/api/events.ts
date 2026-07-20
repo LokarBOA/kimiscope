@@ -203,6 +203,9 @@ export interface TaskItem {
   completed_at?: string
   exit_code?: number
   stop_reason?: string
+  /** Only present on the detail endpoint (GET .../tasks/{id}). */
+  output_preview?: string
+  output_bytes?: number
 }
 
 export interface GoalState {
