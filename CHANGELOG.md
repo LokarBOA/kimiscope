@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **MCP staleness hint** — Settings compares `mcp.json`'s mtime against the daemon's `started_at` (read from the server lock) and shows "mcp.json changed since the daemon started — restart to apply" with a restart button when they diverge (from laptop-agent field feedback).
+- **Interrupted tool calls render as such** — a main-agent call left `running` with no result when the turn ends (crash, abort, daemon restart) is marked `interrupted` (amber) in the store and the tool card, instead of pulsing forever. Aborted calls that recorded a result still show `error`.
+
 ## v0.1.1
 
 ### Added

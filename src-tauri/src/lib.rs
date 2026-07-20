@@ -103,6 +103,56 @@ fn get_mcp_servers() -> Result<serde_json::Value, String> {
   serde_json::from_str(&raw).map_err(|e| format!("invalid mcp.json: {e}"))
 }
 
+/// Parse the daemon lock's `started_at` (fixed ISO-8601 UTC shape) to unix ms.
+fn iso_ms(s: &str) -> Option<u64> {
+  // "2026-07-19T03:52:48.066Z"
+  let y: u64 = s.get(0..4)?.parse().ok()?;
+  let mo: u64 = s.get(5..7)?.parse().ok()?;
+  let d: u64 = s.get(8..10)?.parse().ok()?;
+  let h: u64 = s.get(11..13)?.parse().ok()?;
+  let mi: u64 = s.get(14..16)?.parse().ok()?;
+  let sec: u64 = s.get(17..19)?.parse().ok()?;
+  let ms: u64 = s.get(20..23).and_then(|f| f.parse().ok()).unwrap_or(0);
+  // days-from-civil (Howard Hinnant's algorithm)
+  let y_adj = if mo <= 2 { y.checked_sub(1)? } else { y };
+  let era = y_adj / 400;
+  let yoe = y_adj - era * 400;
+  let mp = (mo + 9) % 12;
+  let doy = (153 * mp + 2) / 5 + d.checked_sub(1)?;
+  let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+  let days = era * 146097 + doe - 719468;
+  Some(((days * 24 + h) * 3600 + mi * 60 + sec) * 1000 + ms)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct McpMeta {
+  mcp_json_mtime_ms: Option<u64>,
+  daemon_started_ms: Option<u64>,
+  stale: bool,
+}
+
+/// mcp.json mtime vs daemon start (lock `started_at`) — the daemon only reads
+/// mcp.json at startup, so a newer mtime means a restart is required.
+#[tauri::command]
+fn get_mcp_meta() -> Result<McpMeta, String> {
+  let home = kimi_home();
+  let mcp_json_mtime_ms = fs::metadata(home.join("mcp.json"))
+    .ok()
+    .and_then(|m| m.modified().ok())
+    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+    .map(|d| d.as_millis() as u64);
+  let daemon_started_ms = fs::read_to_string(home.join("server").join("lock"))
+    .ok()
+    .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
+    .and_then(|v| v.get("started_at").and_then(|s| s.as_str()).and_then(iso_ms));
+  Ok(McpMeta {
+    mcp_json_mtime_ms,
+    daemon_started_ms,
+    stale: matches!((mcp_json_mtime_ms, daemon_started_ms), (Some(a), Some(b)) if a > b),
+  })
+}
+
 /// Enable/disable one MCP server in mcp.json. The daemon picks it up on restart.
 #[tauri::command]
 fn set_mcp_enabled(name: &str, enabled: bool) -> Result<(), String> {
@@ -140,6 +190,20 @@ fn restart_daemon() -> Result<(), String> {
   Ok(())
 }
 
+#[cfg(test)]
+mod tests {
+  use super::iso_ms;
+
+  #[test]
+  fn parses_lock_started_at() {
+    // 1970-01-01T00:00:00.000Z is epoch 0; one lock-shaped timestamp otherwise.
+    assert_eq!(iso_ms("1970-01-01T00:00:00.000Z"), Some(0));
+    assert_eq!(iso_ms("2026-07-19T03:52:48.066Z"), Some(1784433168066));
+    assert_eq!(iso_ms("garbage"), None);
+    assert_eq!(iso_ms("2026-07"), None);
+  }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -156,6 +220,7 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       get_connection_info,
       get_mcp_servers,
+      get_mcp_meta,
       set_mcp_enabled,
       restart_daemon,
       term::term_spawn,

@@ -38,7 +38,7 @@ export interface ToolCallRecord {
   display?: { kind: string; command?: string; cwd?: string; language?: string; [k: string]: unknown }
   output?: unknown
   isError?: boolean
-  status: 'running' | 'done' | 'error'
+  status: 'running' | 'done' | 'error' | 'interrupted'
   progressText?: string
 }
 

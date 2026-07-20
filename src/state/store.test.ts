@@ -245,3 +245,65 @@ describe('outbox', () => {
     expect(useApp.getState().sessionState[SID].outbox).toHaveLength(0)
   })
 })
+
+describe('interrupted tool calls', () => {
+  it('marks result-less main calls interrupted at turn end; keeps done + subagent calls', () => {
+    const st = useApp.getState()
+    st.applyFrame(frame('tool.call.started', { toolCallId: 'c1', name: 'Bash', agentId: 'main' }))
+    st.applyFrame(frame('tool.call.started', { toolCallId: 'c2', name: 'Bash', agentId: 'main' }))
+    st.applyFrame(frame('tool.result', { toolCallId: 'c2', output: 'ok' }))
+    st.applyFrame(frame('tool.call.started', { toolCallId: 'c3', name: 'Bash', agentId: 'sub1' }))
+    st.applyFrame(frame('turn.ended', { agentId: 'main', turnId: 1, reason: 'completed' }))
+    const tc = useApp.getState().sessionState[SID].toolCalls
+    expect(tc.c1.status).toBe('interrupted')
+    expect(tc.c2.status).toBe('done')
+    expect(tc.c3.status).toBe('running')
+  })
+
+  it('marks snapshot zombies interrupted when the session is idle', () => {
+    const st = useApp.getState()
+    const s = snap()
+    s.messages.items = [
+      {
+        id: 'm1',
+        role: 'assistant',
+        content: [{ type: 'tool_use', tool_call_id: 'c1', tool_name: 'Bash', input: {} }],
+      } as never,
+    ]
+    st.applySnapshot(SID, s)
+    expect(useApp.getState().sessionState[SID].toolCalls.c1.status).toBe('interrupted')
+  })
+
+  it('keeps running calls running on a mid-turn snapshot', () => {
+    const st = useApp.getState()
+    const s = snap()
+    s.session.busy = true
+    s.messages.items = [
+      {
+        id: 'm1',
+        role: 'assistant',
+        content: [{ type: 'tool_use', tool_call_id: 'c1', tool_name: 'Bash', input: {} }],
+      } as never,
+    ]
+    st.applySnapshot(SID, s)
+    expect(useApp.getState().sessionState[SID].toolCalls.c1.status).toBe('running')
+  })
+
+  it('history rebuild while idle does not resurrect interrupted calls to running', () => {
+    const st = useApp.getState()
+    st.applyFrame(frame('tool.call.started', { toolCallId: 'c1', name: 'Bash', agentId: 'main' }))
+    st.applyFrame(frame('turn.ended', { agentId: 'main', turnId: 1, reason: 'completed' }))
+    st.setMessages(
+      SID,
+      [
+        {
+          id: 'm1',
+          role: 'assistant',
+          content: [{ type: 'tool_use', tool_call_id: 'c1', tool_name: 'Bash', input: {} }],
+        } as never,
+      ],
+      false,
+    )
+    expect(useApp.getState().sessionState[SID].toolCalls.c1.status).toBe('interrupted')
+  })
+})

@@ -106,6 +106,24 @@ const emptySession = (): SessionState => ({
   skills: [],
 })
 
+/** Main-agent tool calls left `running` with no result once the turn is over
+ *  are dead (crash, abort, daemon restart) — mark them interrupted instead of
+ *  pulsing forever. Subagent calls are left alone (background subagents can
+ *  outlive the main turn). */
+function sweepInterrupted(s: SessionState): SessionState {
+  let changed = false
+  const toolCalls: Record<string, ToolCallRecord> = {}
+  for (const [k, rec] of Object.entries(s.toolCalls)) {
+    if ((rec.agentId ?? 'main') === 'main' && rec.status === 'running' && rec.output === undefined) {
+      toolCalls[k] = { ...rec, status: 'interrupted' }
+      changed = true
+    } else {
+      toolCalls[k] = rec
+    }
+  }
+  return changed ? { ...s, toolCalls } : s
+}
+
 /** Latest TodoList tool state from message history (last write wins). */
 export function extractTodos(messages: ChatMessage[]): TodoItem[] {
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -224,7 +242,7 @@ export const useApp = create<AppState>((set) => ({
             const tb = b as { tool_call_id: string; tool_name: string; input: unknown }
             const live = prev.toolCalls[tb.tool_call_id]
             toolCalls[tb.tool_call_id] =
-              live?.status === 'running'
+              live && (live.status === 'running' || live.status === 'interrupted')
                 ? { ...live, args: tb.input }
                 : {
                     toolCallId: tb.tool_call_id,
@@ -241,6 +259,14 @@ export const useApp = create<AppState>((set) => ({
               rec.isError = tb.is_error
               rec.status = tb.is_error ? 'error' : 'done'
             }
+          }
+        }
+      }
+      // Idle session with result-less calls: those died mid-flight (crash/abort).
+      if (!prev.busy) {
+        for (const rec of Object.values(toolCalls)) {
+          if ((rec.agentId ?? 'main') === 'main' && rec.status === 'running' && rec.output === undefined) {
+            rec.status = 'interrupted'
           }
         }
       }
@@ -453,6 +479,12 @@ export const useApp = create<AppState>((set) => ({
               rec.status = tb.is_error ? 'error' : 'done'
             }
           }
+        }
+      }
+      // A snapshot taken while idle: result-less calls died with their turn.
+      if (!snap.session.busy) {
+        for (const rec of Object.values(toolCalls)) {
+          if (rec.status === 'running' && rec.output === undefined) rec.status = 'interrupted'
         }
       }
       return {
@@ -705,12 +737,14 @@ export const useApp = create<AppState>((set) => ({
           if (p.reason === 'failed' && p.error) {
             next.lastError = `${(p.error as { code?: string }).code}: ${(p.error as { message?: string }).message}`
           }
+          Object.assign(next, sweepInterrupted(next))
           break
         }
         case 'prompt.completed': {
           if (!isMain) break
           next.busy = false
           next.streaming = { ...next.streaming, active: false }
+          Object.assign(next, sweepInterrupted(next))
           break
         }
         case 'approval.resolved': {

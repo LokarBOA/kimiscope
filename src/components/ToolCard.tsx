@@ -141,7 +141,9 @@ export function ToolCard({
       ? 'bg-sky-400 animate-pulse'
       : call.status === 'error'
         ? 'bg-red-500'
-        : 'bg-emerald-500'
+        : call.status === 'interrupted'
+          ? 'bg-amber-500'
+          : 'bg-emerald-500'
 
   let body: ReactNode = null
   if (open) {
@@ -212,6 +214,7 @@ export function ToolCard({
           {call.description ?? (cmd ? String(cmd) : '')}
         </span>
         {live && call.status === 'running' && <span className="text-sky-400/80">running</span>}
+        {call.status === 'interrupted' && <span className="text-amber-400/80">interrupted</span>}
         <span className="ml-2 shrink-0 text-zinc-600">{open ? '▾' : '▸'}</span>
       </button>
       {linkedSubs.length > 0 && (

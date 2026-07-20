@@ -30,6 +30,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [servers, setServers] = useState<Record<string, McpEntry> | null>(null)
   const [dirty, setDirty] = useState(false)
   const [restarting, setRestarting] = useState(false)
+  const [stale, setStale] = useState(false)
   const [permMode, setPermMode] = useState(
     () => localStorage.getItem('kimiharness.permissionMode') ?? 'yolo',
   )
@@ -39,6 +40,8 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
       () => null,
     )
     setServers(j?.mcpServers ?? {})
+    const meta = await invoke<{ stale: boolean }>('get_mcp_meta').catch(() => null)
+    setStale(meta?.stale ?? false)
   }
   useEffect(() => {
     void load()
@@ -61,6 +64,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     try {
       await invoke('restart_daemon')
       setDirty(false)
+      await load() // fresh daemon start clears the stale marker
     } catch (e) {
       alert(`restart failed: ${e}`)
     } finally {
@@ -119,8 +123,14 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             })}
           </div>
           <div className="mt-2 flex items-center gap-2 text-[11px] text-zinc-500">
-            <span>Changes apply to new sessions; daemon restart applies everywhere.</span>
-            {dirty && (
+            {stale ? (
+              <span className="text-amber-400/90">
+                mcp.json changed since the daemon started — restart to apply
+              </span>
+            ) : (
+              <span>Changes apply to new sessions; daemon restart applies everywhere.</span>
+            )}
+            {(dirty || stale) && (
               <button
                 onClick={() => void restart()}
                 disabled={restarting}
