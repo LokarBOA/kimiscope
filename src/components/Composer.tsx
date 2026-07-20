@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { abortActive, sendPrompt } from '../state/sync'
+import { abortActive, runSlashCommand, sendPrompt } from '../state/sync'
 import { useApp } from '../state/store'
+import { filterCommands, slashNameFilter, THINKING_LEVELS } from '../state/commands'
+import type { SkillInfo } from '../api/events'
+import { CommandMenu, type MenuEntry, type MenuSection } from './CommandMenu'
 
 interface PendingImage {
   mediaType: string
@@ -8,11 +11,24 @@ interface PendingImage {
   previewUrl: string
 }
 
+const NO_SKILLS: SkillInfo[] = []
+
+interface FlatEntry extends MenuEntry {
+  action: () => void
+}
+
 export function Composer({ sessionId }: { sessionId: string }) {
   const [text, setText] = useState('')
   const [images, setImages] = useState<PendingImage[]>([])
   const [sending, setSending] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
+  const [highlight, setHighlight] = useState(0)
+  const [modelPicker, setModelPicker] = useState<'model' | 'thinking' | null>(null)
   const busy = useApp((st) => st.sessionState[sessionId]?.busy ?? false)
+  const skills = useApp((st) => st.sessionState[sessionId]?.skills)
+  const models = useApp((st) => st.models)
+  const notice = useApp((st) => st.notice)
+  const setNotice = useApp((st) => st.setNotice)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   // QueueBar "edit" moves a queued prompt's text back here.
@@ -28,6 +44,13 @@ export function Composer({ sessionId }: { sessionId: string }) {
     return () => window.removeEventListener('kimiscope:edit-queued', onEdit)
   }, [sessionId])
 
+  // Transient feedback for executed `/commands`.
+  useEffect(() => {
+    if (!notice) return
+    const t = setTimeout(() => setNotice(null), 8000)
+    return () => clearTimeout(t)
+  }, [notice, setNotice])
+
   function attachImage(file: File) {
     if (!file.type.startsWith('image/')) return
     const reader = new FileReader()
@@ -42,11 +65,96 @@ export function Composer({ sessionId }: { sessionId: string }) {
     reader.readAsDataURL(file)
   }
 
+  /** Run a `/command` client-side; true when handled (input cleared, notice shown). */
+  async function execSlash(raw: string): Promise<boolean> {
+    const r = await runSlashCommand(sessionId, raw)
+    if (!r.handled) return false
+    setText('')
+    setModelPicker(null)
+    if (taRef.current) taRef.current.style.height = 'auto'
+    if (r.notice) setNotice(r.notice)
+    return true
+  }
+
+  function pickCommand(name: string) {
+    if (name === 'model' || name === 'thinking') {
+      setModelPicker(name)
+      setText(`/${name}`)
+      setHighlight(0)
+      return
+    }
+    // Commands needing arguments complete the name and let the user type them.
+    if (name === 'title' || name === 'goal') {
+      setText(`/${name} `)
+      taRef.current?.focus()
+      return
+    }
+    void execSlash(`/${name}`)
+  }
+
+  function pickSkill(name: string) {
+    setText(`/${name} `)
+    taRef.current?.focus()
+  }
+
+  // ---- Menu view model ----
+  const nameFilter = slashNameFilter(text)
+  const menuOpen = !dismissed && (modelPicker !== null || nameFilter !== null)
+  const sections: MenuSection[] = []
+  const flat: FlatEntry[] = []
+  if (menuOpen) {
+    if (modelPicker === 'model') {
+      for (const m of models) {
+        flat.push({
+          key: `model:${m.model}`,
+          label: m.display_name || m.model,
+          hint: m.model,
+          description: m.provider,
+          action: () => void execSlash(`/model ${m.model}`),
+        })
+      }
+      sections.push({ title: 'Models', entries: flat, start: 0 })
+    } else if (modelPicker === 'thinking') {
+      for (const level of THINKING_LEVELS) {
+        flat.push({
+          key: `thinking:${level}`,
+          label: level,
+          action: () => void execSlash(`/thinking ${level}`),
+        })
+      }
+      sections.push({ title: 'Thinking effort', entries: flat, start: 0 })
+    } else {
+      const g = filterCommands(nameFilter ?? '', skills ?? NO_SKILLS)
+      const cmdEntries: FlatEntry[] = g.commands.map((c) => ({
+        key: `cmd:${c.name}`,
+        label: `/${c.name}`,
+        hint: c.args,
+        description: c.description,
+        action: () => pickCommand(c.name),
+      }))
+      const skillEntries: FlatEntry[] = g.skills.map((s) => ({
+        key: `skill:${s.source}:${s.name}`,
+        label: `/${s.name}`,
+        hint: s.source,
+        description: s.description,
+        action: () => pickSkill(s.name),
+      }))
+      if (cmdEntries.length) sections.push({ title: 'Session', entries: cmdEntries, start: 0 })
+      if (skillEntries.length)
+        sections.push({ title: 'Skills', entries: skillEntries, start: cmdEntries.length })
+      flat.push(...cmdEntries, ...skillEntries)
+    }
+  }
+  const hi = Math.min(highlight, Math.max(flat.length - 1, 0))
+
   async function submit(mode: 'queue' | 'steer' | 'interrupt') {
     const t = text.trim()
     if ((!t && images.length === 0) || sending) return
     setSending(true)
     try {
+      // `/commands` run client-side and never reach the daemon as prompts;
+      // unknown ones fall through as normal messages (CLI semantics).
+      if (t.startsWith('/') && (await execSlash(t))) return
       await sendPrompt(sessionId, t, mode, images)
       setText('')
       setImages([])
@@ -59,7 +167,16 @@ export function Composer({ sessionId }: { sessionId: string }) {
   }
 
   return (
-    <div className="border-t border-zinc-800 p-3">
+    <div className="relative border-t border-zinc-800 p-3">
+      {menuOpen && (
+        <CommandMenu
+          sections={sections}
+          highlight={hi}
+          total={flat.length}
+          onPick={(i) => flat[i]?.action()}
+          onHover={setHighlight}
+        />
+      )}
       {images.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
           {images.map((img, i) => (
@@ -84,9 +201,14 @@ export function Composer({ sessionId }: { sessionId: string }) {
           ref={taRef}
           value={text}
           rows={1}
-          placeholder={busy ? 'Message — Enter queues, ⚡ Now interrupts…' : 'Message Kimi… (paste images)'}
+          placeholder={
+            busy ? 'Message — Enter queues, ⚡ Now interrupts…' : 'Message Kimi… (paste images, / for commands)'
+          }
           onChange={(e) => {
             setText(e.target.value)
+            setDismissed(false)
+            setHighlight(0)
+            if (modelPicker && e.target.value !== `/${modelPicker}`) setModelPicker(null)
             const el = e.target
             el.style.height = 'auto'
             el.style.height = Math.min(el.scrollHeight, 200) + 'px'
@@ -95,6 +217,26 @@ export function Composer({ sessionId }: { sessionId: string }) {
             Array.from(e.clipboardData.files).forEach(attachImage)
           }}
           onKeyDown={(e) => {
+            if (menuOpen) {
+              if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault()
+                const n = Math.max(flat.length, 1)
+                setHighlight((h) => (h + (e.key === 'ArrowDown' ? 1 : -1) + n) % n)
+                return
+              }
+              if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {
+                e.preventDefault()
+                if (flat.length > 0) flat[hi]?.action()
+                else if (e.key === 'Enter') void submit('queue')
+                return
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                setDismissed(true)
+                setModelPicker(null)
+                return
+              }
+            }
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault()
               // Enter is always a normal send — queues behind an active turn.
@@ -144,8 +286,14 @@ export function Composer({ sessionId }: { sessionId: string }) {
         )}
       </div>
       <div className="mt-1 px-1 text-[11px] text-zinc-600">
-        Enter sends (queues if busy) · ⚡ Now interrupts instantly · Steer lands at next step · Esc
-        aborts
+        {notice ? (
+          <span className="text-amber-400/90">{notice}</span>
+        ) : (
+          <>
+            Enter sends (queues if busy) · ⚡ Now interrupts instantly · Steer lands at next step ·
+            Esc aborts · / for commands
+          </>
+        )}
       </div>
     </div>
   )

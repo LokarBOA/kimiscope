@@ -24,6 +24,6 @@ setTimeout(async () => {
   writeFileSync('reference/probe-question-frames.json', JSON.stringify(dump, null, 1))
   const q = await fetch(`${BASE}/api/v1/sessions/${SID}/questions?status=pending`, { headers: H }).then((r) => r.json())
   console.log('REST pending questions:', JSON.stringify(q.data ?? q, null, 1).slice(0, 1500))
-  await fetch(`${BASE}/api/v1/sessions/${SID}:archive`, { method: 'POST', headers: H })
+  await fetch(`${BASE}/api/v1/sessions/${SID}:archive`, { method: 'POST', headers: H, body: '{}' })
   console.log('done'); process.exit(0)
 }, 90000)

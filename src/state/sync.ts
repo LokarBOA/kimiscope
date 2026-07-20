@@ -3,14 +3,17 @@ import { getConnectionInfo } from '../api/connection'
 import { notifyAttention } from '../api/notify'
 import { KimiSocket } from '../api/ws'
 import type {
+  AgentConfigPatch,
   ApprovalItem,
   Frame,
   GoalState,
   QuestionItem,
   SessionSummary,
+  SkillInfo,
   Snapshot,
   TaskItem,
 } from '../api/events'
+import { parseSlash, THINKING_LEVELS } from './commands'
 import { useApp, type ModelInfo, type PromptQueue, type Workspace } from './store'
 
 let socket: KimiSocket | null = null
@@ -90,8 +93,9 @@ export async function initApp(): Promise<void> {
 
 export async function refreshSessions(): Promise<void> {
   try {
+    const includeArchived = useApp.getState().showArchived ? '&include_archive=true' : ''
     const [sessions, workspaces] = await Promise.all([
-      get<{ items: SessionSummary[] }>('/sessions?limit=100'),
+      get<{ items: SessionSummary[] }>(`/sessions?limit=100${includeArchived}`),
       get<{ items: Workspace[] }>('/workspaces').catch(() => ({ items: [] as Workspace[] })),
     ])
     useApp.getState().setSessions(sessions.items ?? [])
@@ -187,9 +191,13 @@ interface SessionStatus {
   max_context_tokens?: number
   model?: string
   permission?: string
+  plan_mode?: boolean
+  swarm_mode?: boolean
+  thinking_level?: string
 }
 
-/** Pull live context/model/permission status (usage_updated frames don't fire). */
+/** Pull live context/model/permission/plan/swarm/thinking status (usage_updated
+ *  frames don't fire, and GET /profile + snapshots return a sparse projection). */
 export async function refreshStatus(id: string): Promise<void> {
   try {
     const s = await get<SessionStatus>(`/sessions/${id}/status`)
@@ -219,6 +227,172 @@ export async function goalCreate(id: string, objective: string): Promise<void> {
   await post(`/sessions/${id}/profile`, { agent_config: { goal_objective: objective } })
   await refreshGoal(id)
 }
+
+/** Refetch invocable skills for the Composer `/` menu. */
+export async function refreshSkills(id: string): Promise<void> {
+  try {
+    const res = await get<{ skills: SkillInfo[] }>(`/sessions/${id}/skills`)
+    useApp.getState().setSkills(id, res.skills ?? [])
+  } catch {
+    // daemon hiccup
+  }
+}
+
+/** Toggle model / permission / plan / swarm etc. via the session profile.
+ *  State re-syncs from /status — the profile GET returns a sparse projection. */
+export async function updateAgentConfig(id: string, patch: AgentConfigPatch): Promise<void> {
+  await post(`/sessions/${id}/profile`, { agent_config: patch })
+  await refreshStatus(id)
+}
+
+export async function renameSession(id: string, title: string): Promise<void> {
+  await post(`/sessions/${id}/profile`, { title })
+  await refreshSessions()
+}
+
+/** Fork into a child session (preserving full history) and open it. */
+export async function forkSession(id: string): Promise<void> {
+  const child = await post<{ id: string }>(`/sessions/${id}/children`, {})
+  await refreshSessions()
+  useApp.getState().setActiveSession(child.id)
+  void watchSession(child.id)
+}
+
+/** Export session + diagnostic logs as a zip. The endpoint streams the archive
+ *  binary directly (no JSON envelope), so this bypasses the typed client and
+ *  triggers a browser download. Returns the filename used. */
+export async function exportSession(id: string): Promise<string> {
+  const conn = await getConnectionInfo()
+  const res = await fetch(`${conn.baseUrl}/api/v1/sessions/${id}/export`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${conn.token}`, 'Content-Type': 'application/json' },
+    body: '{}',
+  })
+  if (!res.ok) throw new Error(`export failed: ${res.status}`)
+  const cd = res.headers.get('Content-Disposition') ?? ''
+  const named = /filename="?([^";]+)"?/.exec(cd)?.[1]
+  const filename = named ?? `session-${id.slice(8, 16)}.zip`
+  const url = URL.createObjectURL(await res.blob())
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+  return filename
+}
+
+/** Activate a skill in the session — REST analogue of the /<skill> slash command.
+ *  (Tail is `{name}:activate`; a bare name is rejected as an unknown action.) */
+export async function activateSkill(id: string, name: string, args: string): Promise<void> {
+  await post(`/sessions/${id}/skills/${name}:activate`, { args })
+}
+
+function lastAssistantText(id: string): string | null {
+  const msgs = useApp.getState().sessionState[id]?.messages ?? []
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    if (msgs[i].role !== 'assistant') continue
+    const text = (msgs[i].content ?? [])
+      .filter((b) => b.type === 'text')
+      .map((b) => (b as { text: string }).text)
+      .join('\n')
+    if (text.trim()) return text
+  }
+  return null
+}
+
+export interface SlashResult {
+  handled: boolean
+  notice?: string
+}
+
+/** Execute a `/command` client-side against the daemon (the daemon itself
+ *  treats `/...` as plain prompt text — verified by probe). Returns
+ *  handled=false for unknown input so the Composer falls through to a normal
+ *  send, matching CLI semantics. */
+export async function runSlashCommand(id: string, raw: string): Promise<SlashResult> {
+  const p = parseSlash(raw)
+  if (!p) return { handled: false }
+  const { name, args } = p
+  try {
+    switch (name) {
+      case 'yolo':
+      case 'auto':
+      case 'manual':
+        await updateAgentConfig(id, { permission_mode: name })
+        return { handled: true, notice: `permission → ${name}` }
+      case 'plan': {
+        const cur = useApp.getState().sessionState[id]?.summary?.agent_config?.plan_mode ?? false
+        const next = args === 'on' ? true : args === 'off' ? false : !cur
+        await updateAgentConfig(id, { plan_mode: next })
+        return { handled: true, notice: `plan mode → ${next ? 'on' : 'off'}` }
+      }
+      case 'model': {
+        if (!args) return { handled: true, notice: 'usage: /model <alias>' }
+        const models = useApp.getState().models
+        const m = models.find((x) => x.model === args) ?? models.find((x) => x.model.includes(args))
+        if (!m) return { handled: true, notice: `no model matching "${args}"` }
+        await updateAgentConfig(id, { model: m.model })
+        return { handled: true, notice: `model → ${m.display_name || m.model}` }
+      }
+      case 'thinking': {
+        const level = args.toLowerCase()
+        if (!THINKING_LEVELS.includes(level as (typeof THINKING_LEVELS)[number])) {
+          return { handled: true, notice: `usage: /thinking <${THINKING_LEVELS.join('|')}>` }
+        }
+        await updateAgentConfig(id, { thinking: level })
+        return { handled: true, notice: `thinking → ${level}` }
+      }
+      case 'title': {
+        if (!args) return { handled: true, notice: 'usage: /title <text>' }
+        await renameSession(id, args.slice(0, 200))
+        return { handled: true, notice: `renamed → ${args.slice(0, 60)}` }
+      }
+      case 'goal': {
+        if (args === 'pause' || args === 'resume' || args === 'cancel') {
+          await goalControl(id, args)
+          return { handled: true, notice: `goal ${args}` }
+        }
+        if (!args || args === 'next' || args.startsWith('next ')) {
+          return {
+            handled: true,
+            notice: 'usage: /goal <objective|pause|resume|cancel> (goal queueing unsupported)',
+          }
+        }
+        await goalCreate(id, args)
+        return { handled: true, notice: 'goal started' }
+      }
+      case 'fork':
+        await forkSession(id)
+        return { handled: true, notice: 'forked — opened child session' }
+      case 'export': {
+        const filename = await exportSession(id)
+        return { handled: true, notice: `exported → ${filename} (downloaded)` }
+      }
+      case 'copy': {
+        const text = lastAssistantText(id)
+        if (!text) return { handled: true, notice: 'nothing to copy' }
+        await navigator.clipboard.writeText(text)
+        return { handled: true, notice: 'last assistant message copied' }
+      }
+      case 'new': {
+        const cwd = useApp.getState().sessionState[id]?.summary?.metadata?.cwd
+        if (!cwd) return { handled: true, notice: 'no folder known for this session' }
+        await newSession(cwd)
+        return { handled: true, notice: 'new session' }
+      }
+      default: {
+        const skills = useApp.getState().sessionState[id]?.skills ?? []
+        const sk = skills.find((s) => s.name.toLowerCase() === name)
+        if (!sk) return { handled: false }
+        await activateSkill(id, sk.name, args)
+        return { handled: true, notice: `/${sk.name} activated` }
+      }
+    }
+  } catch (e) {
+    return { handled: true, notice: `/${name} failed: ${e instanceof Error ? e.message : e}` }
+  }
+}
+
 
 /** Refetch the background task list for a session. */
 export async function refreshTasks(id: string): Promise<void> {
@@ -314,6 +488,7 @@ export async function watchSession(id: string): Promise<void> {
   void refreshTasks(id)
   void refreshGoal(id)
   void refreshStatus(id)
+  void refreshSkills(id)
 
   if (!socket) return
   // The socket may still be connecting (app just launched, session restored
@@ -392,7 +567,13 @@ export async function sendPrompt(
   const busy = useApp.getState().sessionState[sessionId]?.busy ?? false
   const kind = busy ? mode : 'send'
   const localId = `ob_${Date.now()}_${++outboxCounter}`
-  useApp.getState().addToOutbox(sessionId, { localId, text, kind, sentAt: Date.now() })
+  useApp.getState().addToOutbox(sessionId, {
+    localId,
+    text,
+    kind,
+    sentAt: Date.now(),
+    ...(images.length ? { imageCount: images.length } : {}),
+  })
   const content: unknown[] = [
     ...images.map((img) => ({
       type: 'image',

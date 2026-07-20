@@ -16,5 +16,5 @@ for (let i = 0; i < 30; i++) {
   }
   if (i === 29) console.log('NO QUESTION APPEARED. last resp:', JSON.stringify(q).slice(0, 300))
 }
-await fetch(`${BASE}/api/v1/sessions/${SID}:archive`, { method: 'POST', headers: H })
+await fetch(`${BASE}/api/v1/sessions/${SID}:archive`, { method: 'POST', headers: H, body: '{}' })
 process.exit(0)

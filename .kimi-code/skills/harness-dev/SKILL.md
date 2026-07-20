@@ -24,6 +24,7 @@ HMR applies to frontend changes. Rust changes need a cargo restart.
 
 - `npx tsc -b` must be clean before anything is called done.
 - Protocol changes: verify against the live daemon with a probe script (`scripts/probe-*.mjs` pattern, see the `live-probe` skill). Never code against assumed frame shapes.
+- UI behavior: run the frontend in a plain browser and drive it with Playwright — `npm run dev:token` (writes the gitignored `public/dev-token.json`), `npm run dev`, open http://localhost:5173. `getConnectionInfo` falls back to the token file automatically when Tauri IPC is absent.
 - UI state: zustand v5 — no `?? []` / `?? {}` inside selectors (infinite render loop; see AGENTS.md).
 - The daemon must be running (`curl http://127.0.0.1:58627/api/v1/healthz`); the app auto-starts it, probes do not.
 

@@ -23,5 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 .server-token.tmp
+public/dev-token.json
 .playwright-mcp/
 src-tauri/target/

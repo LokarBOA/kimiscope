@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Image messages render** — history `image` blocks show as thumbnails (the daemon stores them as data URLs); the composer's sending chip shows `🖼×N` while an image send is in flight. Combined with the envelope stripping, an image send now reads as "the image" in the log, never as a blob of system text.
+- **`/` command menu in the Composer** — filtered popup (Session + live per-session Skills sections, keyboard/mouse) with CLI semantics: unmatched `/text` falls through as a normal prompt. Session commands: `/yolo` `/auto` `/manual`, `/plan [on|off]`, `/model` (alias or picker), `/thinking [off|low|medium|high|xhigh|max]` (alias or picker), `/title`, `/goal <objective|pause|resume|cancel>`, `/fork` (child session), `/export` (zip download), `/copy`, `/new`. Skill entries activate via `POST /skills/{name}:activate`.
+- **InsightRail**: thinking row + plan/swarm badges; mode/plan/swarm/thinking state synced from `/status` (the profile GET and snapshots return a sparse projection).
+- **Sidebar archived view** — 🗄 toggle lists archived sessions (dimmed, tagged); read-only, the daemon has no unarchive action in 0.27.0.
+- **Browser dev loop** — `npm run dev:token` writes the gitignored `public/dev-token.json`; `getConnectionInfo` falls back to it when Tauri IPC is absent, so the app runs in a plain browser (Playwright-friendly).
+
+### Fixed
+
+- **Control-plane envelopes no longer render as chat messages** — `<system-reminder>`, `<notification>`, and `<kimi-skill-loaded>` blocks (which arrive as user-role text) are stripped in `MessageView` (`src/state/sysmsg.ts`); messages with nothing real left are hidden entirely.
+- `/command` notices survive session switches (store-backed) — `/fork`'s confirmation is no longer lost when the child opens.
+- Chat follow-scroll rewritten around a `ResizeObserver` on the content — any growth (deltas, tool progress, subagents, reflow) snaps to bottom while stuck; the streaming `ThinkingBlock` now auto-scrolls its own box.
+- `mergeUsage` no longer materializes a field-less usage object from an all-zero payload (crashed the context bar on zero-usage sessions).
+- `scripts/probe-*.mjs` archive calls sent `Content-Type: application/json` with an empty body, which the daemon rejects — every probe "cleanup" was a silent no-op and leaked sessions. Now they send `{}`.
+
 ## v0.1.0 — initial release
 
 Standalone desktop UI for Kimi Code (Tauri 2, Windows), rendering the kimi daemon's local REST + WebSocket API. Verified against kimi 0.27.0.

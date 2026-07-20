@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useApp } from '../state/store'
-import { archiveSession, newSession, watchSession } from '../state/sync'
+import { archiveSession, newSession, refreshSessions, watchSession } from '../state/sync'
 import type { SessionSummary } from '../api/events'
 
 function timeAgo(iso: string): string {
@@ -17,6 +17,7 @@ function SessionRow({ s }: { s: SessionSummary }) {
   const live = useApp((st) => st.sessionState[s.id])
   const busy = live?.busy ?? s.busy
   const pending = (live?.pendingInteraction ?? s.pending_interaction) !== 'none'
+  const archived = s.archived === true
 
   return (
     <div
@@ -34,7 +35,7 @@ function SessionRow({ s }: { s: SessionSummary }) {
       }}
       className={`group mb-0.5 w-full cursor-pointer rounded-md px-2.5 py-1.5 text-left transition-colors ${
         s.id === activeId ? 'bg-zinc-800' : 'hover:bg-zinc-800/50'
-      }`}
+      } ${archived ? 'opacity-50' : ''}`}
     >
       <div className="flex items-center gap-2">
         <span
@@ -45,18 +46,22 @@ function SessionRow({ s }: { s: SessionSummary }) {
         <span className="min-w-0 flex-1 truncate text-[13px] text-zinc-200">
           {s.title || 'Untitled'}
         </span>
-        <button
-          title="Archive session"
-          onClick={(e) => {
-            e.stopPropagation()
-            if (busy && !window.confirm(`"${s.title || 'Untitled'}" is mid-turn — archive anyway?`))
-              return
-            void archiveSession(s.id)
-          }}
-          className="shrink-0 rounded px-1 text-[11px] text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-700 hover:text-zinc-300"
-        >
-          ✕
-        </button>
+        {archived ? (
+          <span className="shrink-0 text-[10px] text-zinc-600 uppercase">archived</span>
+        ) : (
+          <button
+            title="Archive session"
+            onClick={(e) => {
+              e.stopPropagation()
+              if (busy && !window.confirm(`"${s.title || 'Untitled'}" is mid-turn — archive anyway?`))
+                return
+              void archiveSession(s.id)
+            }}
+            className="shrink-0 rounded px-1 text-[11px] text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-700 hover:text-zinc-300"
+          >
+            ✕
+          </button>
+        )}
         <span className="shrink-0 text-[11px] text-zinc-600 group-hover:hidden">
           {timeAgo(s.updated_at)}
         </span>
@@ -110,6 +115,8 @@ function OpenFolder() {
 export function SessionList() {
   const sessions = useApp((st) => st.sessions)
   const workspaces = useApp((st) => st.workspaces)
+  const showArchived = useApp((st) => st.showArchived)
+  const setShowArchived = useApp((st) => st.setShowArchived)
 
   const groups = useMemo(() => {
     const byWs = new Map<string, SessionSummary[]>()
@@ -135,10 +142,20 @@ export function SessionList() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-zinc-800 px-3 py-2.5">
+      <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-2.5">
         <span className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
           Projects
         </span>
+        <button
+          onClick={() => {
+            setShowArchived(!showArchived)
+            void refreshSessions()
+          }}
+          title={showArchived ? 'Hide archived sessions' : 'Show archived sessions'}
+          className={`text-[13px] ${showArchived ? 'text-zinc-200' : 'text-zinc-600 hover:text-zinc-400'}`}
+        >
+          🗄
+        </button>
       </div>
       <div className="flex-1 overflow-y-auto p-1.5">
         {groups.map(({ workspace, id, sessions: list }) => (

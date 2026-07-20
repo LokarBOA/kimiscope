@@ -294,11 +294,32 @@ export function InsightRail({ sessionId }: { sessionId: string }) {
             </span>
           </div>
           <div className="flex justify-between gap-2">
+            <span>Thinking</span>
+            <span className="text-zinc-300">{s.summary?.agent_config?.thinking || '—'}</span>
+          </div>
+          <div className="flex justify-between gap-2">
             <span>Mode</span>
             <span className="text-zinc-300">
               {s.summary?.agent_config?.permission_mode || '—'}
             </span>
           </div>
+          {(s.summary?.agent_config?.plan_mode || s.summary?.agent_config?.swarm_mode) && (
+            <div className="flex justify-between gap-2">
+              <span>Flags</span>
+              <span className="flex gap-1">
+                {s.summary?.agent_config?.plan_mode && (
+                  <span className="rounded bg-violet-900/50 px-1.5 py-px text-[10px] text-violet-300">
+                    plan
+                  </span>
+                )}
+                {s.summary?.agent_config?.swarm_mode && (
+                  <span className="rounded bg-emerald-900/50 px-1.5 py-px text-[10px] text-emerald-300">
+                    swarm
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
           <div className="flex justify-between gap-2">
             <span>Folder</span>
             <span className="truncate text-zinc-300" title={s.summary?.metadata?.cwd}>

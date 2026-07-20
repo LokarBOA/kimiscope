@@ -7,6 +7,7 @@ import type {
   QuestionItem,
   SessionSummary,
   SessionUsage,
+  SkillInfo,
   Snapshot,
   SubagentRecord,
   GoalState,
@@ -49,6 +50,7 @@ export interface OutboxItem {
   text: string
   kind: 'queue' | 'steer' | 'interrupt' | 'send'
   sentAt: number
+  imageCount?: number
 }
 
 export interface SessionState {
@@ -71,6 +73,7 @@ export interface SessionState {
   queue: PromptQueue | null
   outbox: OutboxItem[]
   hasMore: boolean
+  skills: SkillInfo[]
 }
 
 const emptyStreaming = (): StreamingState => ({
@@ -100,6 +103,7 @@ const emptySession = (): SessionState => ({
   queue: null,
   outbox: [],
   hasMore: false,
+  skills: [],
 })
 
 /** Latest TodoList tool state from message history (last write wins). */
@@ -139,6 +143,11 @@ interface AppState {
   models: ModelInfo[]
   defaultModel: string | null
   initError: string | null
+  /** Transient composer feedback for `/commands` (survives session switches). */
+  notice: string | null
+  /** Sidebar: include archived sessions in the list (view-only; the daemon
+   *  has no unarchive action in 0.27.0). */
+  showArchived: boolean
 
   setConnection: (c: ConnectionInfo) => void
   setSocketState: (s: AppState['socketState']) => void
@@ -155,18 +164,29 @@ interface AppState {
   markSynced: (id: string) => void
   setModels: (m: ModelInfo[], defaultModel: string | null) => void
   setInitError: (e: string | null) => void
+  setNotice: (n: string | null) => void
+  setShowArchived: (b: boolean) => void
   setApprovals: (id: string, approvals: ApprovalItem[]) => void
   setQuestions: (id: string, questions: QuestionItem[]) => void
   setTasks: (id: string, tasks: TaskItem[]) => void
   setGoal: (id: string, goal: GoalState | null) => void
   applyStatus: (
     id: string,
-    s: { context_tokens?: number; max_context_tokens?: number; model?: string; permission?: string },
+    s: {
+      context_tokens?: number
+      max_context_tokens?: number
+      model?: string
+      permission?: string
+      plan_mode?: boolean
+      swarm_mode?: boolean
+      thinking_level?: string
+    },
   ) => void
   mergeUsage: (id: string, u: SessionUsage) => void
   setQueue: (id: string, q: PromptQueue | null) => void
   addToOutbox: (id: string, item: OutboxItem) => void
   clearOutbox: (id: string, localId?: string) => void
+  setSkills: (id: string, skills: SkillInfo[]) => void
 }
 
 export const useApp = create<AppState>((set) => ({
@@ -181,6 +201,8 @@ export const useApp = create<AppState>((set) => ({
   models: [],
   defaultModel: null,
   initError: null,
+  notice: null,
+  showArchived: false,
 
   setConnection: (conn) => set({ conn }),
   setSocketState: (socketState) => set({ socketState }),
@@ -269,6 +291,10 @@ export const useApp = create<AppState>((set) => ({
 
   setInitError: (initError) => set({ initError }),
 
+  setNotice: (notice) => set({ notice }),
+
+  setShowArchived: (showArchived) => set({ showArchived }),
+
   setApprovals: (id, approvals) =>
     set((st) => ({
       sessionState: {
@@ -321,6 +347,9 @@ export const useApp = create<AppState>((set) => ({
               ...prev.summary.agent_config,
               ...(s.model ? { model: s.model } : {}),
               ...(s.permission ? { permission_mode: s.permission } : {}),
+              ...(s.plan_mode !== undefined ? { plan_mode: s.plan_mode } : {}),
+              ...(s.swarm_mode !== undefined ? { swarm_mode: s.swarm_mode } : {}),
+              ...(s.thinking_level ? { thinking: s.thinking_level } : {}),
             },
           }
         : prev.summary
@@ -339,11 +368,16 @@ export const useApp = create<AppState>((set) => ({
       // The sessions list reports all-zero usage for TUI-owned sessions; never
       // let zeros clobber real values pulled from /status or the snapshot.
       const merged = { ...(prev.usage ?? {}) } as SessionUsage
+      let any = false
       for (const [k, v] of Object.entries(u)) {
         if (typeof v === 'number' && v !== 0) {
           ;(merged as unknown as Record<string, number>)[k] = v
+          any = true
         }
       }
+      // An all-zero payload with nothing real yet would leave a field-less
+      // object — truthy but missing context_tokens, which crashes the rail.
+      if (!any && !prev.usage) return st
       return {
         sessionState: {
           ...st.sessionState,
@@ -385,6 +419,14 @@ export const useApp = create<AppState>((set) => ({
         },
       }
     }),
+
+  setSkills: (id, skills) =>
+    set((st) => ({
+      sessionState: {
+        ...st.sessionState,
+        [id]: { ...(st.sessionState[id] ?? emptySession()), skills },
+      },
+    })),
 
   applySnapshot: (id, snap) =>
     set((st) => {

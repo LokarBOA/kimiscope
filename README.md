@@ -64,5 +64,7 @@ npm run dev                                # terminal 1 (vite)
 cd src-tauri && cargo run --no-default-features   # terminal 2 (app window)
 ```
 
+Or in a plain browser (no Tauri window, e.g. for Playwright): `npm run dev:token` once, `npm run dev`, open http://localhost:5173.
+
 Build: `npm run tauri build` (kill any running KimiScope.exe first — Windows locks it).
 Requires Rust + Node. Architecture, protocol facts, and pitfalls: `AGENTS.md`.

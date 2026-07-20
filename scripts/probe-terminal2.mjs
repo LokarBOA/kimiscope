@@ -34,6 +34,6 @@ ws.send(JSON.stringify({ type: 'terminal_attach', id: 'a1', payload: { session_i
 await sleep(1200)
 ws.send(JSON.stringify({ type: 'terminal_input', id: 'i1', payload: { session_id: SID, terminal_id: TID, data: 'echo term-alive\r' } }))
 await sleep(4000)
-await fetch(`${BASE}/api/v1/sessions/${SID}:archive`, { method: 'POST', headers: H })
+await fetch(`${BASE}/api/v1/sessions/${SID}:archive`, { method: 'POST', headers: H, body: '{}' })
 console.log('done')
 process.exit(0)

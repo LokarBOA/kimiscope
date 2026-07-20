@@ -292,10 +292,37 @@ export interface SessionSummary {
   last_prompt?: string
   last_turn_reason?: string
   metadata?: { cwd?: string }
-  agent_config?: { model?: string; permission_mode?: string }
+  agent_config?: {
+    model?: string
+    permission_mode?: string
+    plan_mode?: boolean
+    swarm_mode?: boolean
+    thinking?: string
+  }
   usage?: SessionUsage
   message_count?: number
   last_seq?: number
+}
+
+/** Writable subset of the session profile's agent_config (POST /sessions/{id}/profile). */
+export interface AgentConfigPatch {
+  model?: string
+  permission_mode?: 'manual' | 'yolo' | 'auto'
+  plan_mode?: boolean
+  swarm_mode?: boolean
+  thinking?: string
+  goal_objective?: string
+  goal_control?: 'pause' | 'resume' | 'cancel'
+}
+
+/** A skill invocable via the Composer `/` menu (GET /sessions/{id}/skills). */
+export interface SkillInfo {
+  name: string
+  description: string
+  path: string
+  source: 'project' | 'user' | 'extra' | 'builtin'
+  type?: string
+  disable_model_invocation?: boolean
 }
 
 export interface Snapshot {

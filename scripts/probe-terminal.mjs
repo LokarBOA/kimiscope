@@ -29,6 +29,6 @@ ws.on('message', (m) => {
 })
 ws.on('error', (e) => { console.error('WS ERROR', e.message); process.exit(1) })
 setTimeout(async () => {
-  await fetch(`${BASE}/api/v1/sessions/${SID}:archive`, { method: 'POST', headers: H })
+  await fetch(`${BASE}/api/v1/sessions/${SID}:archive`, { method: 'POST', headers: H, body: '{}' })
   console.log('done'); process.exit(0)
 }, 20000)

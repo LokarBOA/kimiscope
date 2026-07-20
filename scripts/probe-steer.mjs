@@ -26,4 +26,4 @@ async function run() {
   console.log('steer response:', st.status, (await st.text()).slice(0, 200))
 }
 ws.on('error', (e) => { console.error('WS ERROR', e.message); process.exit(1) })
-setTimeout(async () => { await fetch(`${BASE}/api/v1/sessions/${SID}:archive`, { method: 'POST', headers: H }); console.log('done'); process.exit(0) }, 60000)
+setTimeout(async () => { await fetch(`${BASE}/api/v1/sessions/${SID}:archive`, { method: 'POST', headers: H, body: '{}' }); console.log('done'); process.exit(0) }, 60000)

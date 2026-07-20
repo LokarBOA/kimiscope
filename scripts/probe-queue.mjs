@@ -20,5 +20,5 @@ if (qid) {
 }
 const q2 = await fetch(`${BASE}/api/v1/sessions/${SID}/prompts`, { headers: H }).then((r) => r.json())
 console.log('queue after:', JSON.stringify(q2.data ?? q2).slice(0, 300))
-await fetch(`${BASE}/api/v1/sessions/${SID}:archive`, { method: 'POST', headers: H })
+await fetch(`${BASE}/api/v1/sessions/${SID}:archive`, { method: 'POST', headers: H, body: '{}' })
 process.exit(0)

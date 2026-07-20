@@ -18,5 +18,5 @@ for (const m of (msgs.data ?? msgs).items ?? []) {
 }
 const q = await fetch(`${BASE}/api/v1/sessions/${SID}/prompts`, { headers: H }).then((r) => r.json())
 console.log('--- /prompts queued count:', ((q.data ?? q).queued ?? []).length)
-await fetch(`${BASE}/api/v1/sessions/${SID}:archive`, { method: 'POST', headers: H })
+await fetch(`${BASE}/api/v1/sessions/${SID}:archive`, { method: 'POST', headers: H, body: '{}' })
 process.exit(0)

@@ -156,6 +156,23 @@ describe('usage accumulation (REST returns zeros in 0.27.0)', () => {
     expect(useApp.getState().sessionState[SID].usage!.context_tokens).toBe(999)
     expect(useApp.getState().sessionState[SID].usage!.context_limit).toBe(1000)
   })
+
+  it('mergeUsage ignores an all-zero payload when no real usage exists yet', () => {
+    const st = useApp.getState()
+    st.applyFrame(frame('turn.started', { agentId: 'main', turnId: 1 })) // materialize session
+    st.mergeUsage(SID, {
+      input_tokens: 0,
+      output_tokens: 0,
+      cache_read_tokens: 0,
+      cache_creation_tokens: 0,
+      total_cost_usd: 0,
+      context_tokens: 0,
+      context_limit: 0,
+      turn_count: 0,
+    })
+    // A field-less {} here is truthy and crashes InsightRail's context bar.
+    expect(useApp.getState().sessionState[SID].usage).toBeNull()
+  })
 })
 
 describe('context.spliced merging', () => {

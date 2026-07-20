@@ -23,7 +23,7 @@ To set up KimiScope on a new Windows machine, an agent can do everything with th
 - **Frontend** (React 19 + TS + Vite + Tailwind v4 + zustand): talks to the daemon directly.
   - `src/api/` — REST client (`client.ts`), WS client (`ws.ts`, auth via `Sec-WebSocket-Protocol: kimi-code.bearer.<token>`, the only browser-feasible mechanism), event types (`events.ts`).
   - `src/state/` — `store.ts` (zustand, per-session state + frame reducer), `sync.ts` (socket lifecycle, snapshot→subscribe `SessionSync`, history pulls, notifications).
-  - `src/components/` — SessionList (workspaces), ChatView (messages/streaming), ToolCard (per-tool renderers incl. diffs + subagent panels), ThinkingBlock, ApprovalBar, QuestionDialog, InsightRail (todos/usage), Composer, ErrorSurface.
+  - `src/components/` — SessionList (workspaces), ChatView (messages/streaming), ToolCard (per-tool renderers incl. diffs + subagent panels), ThinkingBlock, ApprovalBar, QuestionDialog, InsightRail (todos/usage), Composer (+ CommandMenu `/` popup), ErrorSurface.
 
 ## Daemon protocol facts (verified against kimi 0.27.0)
 
@@ -34,10 +34,12 @@ To set up KimiScope on a new Windows machine, an agent can do everything with th
 - Subagent frames share the session stream with `agentId != 'main'`; lifecycle: `subagent.spawned/started/completed`. Never merge them into main streaming/history.
 - Approvals: `GET .../approvals?status=pending` (the status param is required), resolve via `POST .../approvals/{id} {decision}`. Questions analogous; answers use `{kind: single|multi|other|multi_with_other|skipped}`.
 - Steer mid-turn: `POST /prompts` (queues) then `POST /prompts:steer {prompt_ids}`.
+- The daemon does **not** interpret `/commands` sent as prompts — the Composer's `/` menu is client-side (`src/state/commands.ts` pure parser/filter; dispatch in `sync.ts:runSlashCommand`). Skills: `GET /sessions/{id}/skills`, activate via `POST /sessions/{id}/skills/{name}:activate {args}` (a bare name tail is rejected). Mode toggles go through `POST /profile {agent_config}` and re-sync from `GET /status` — **the profile GET and snapshots return a sparse `agent_config` projection**, so `/status` (which also carries `plan_mode`/`swarm_mode`) is the only reliable read-back. `/sessions/{id}/export` streams the zip binary directly (no JSON envelope).
 
 ## Commands
 
-- Dev: `npm run dev` (vite, one terminal) + `cargo run --no-default-features` in `src-tauri/` (another). HMR works; the Rust side rebuilds manually. `npm run tauri dev` also works but has been flaky under background task managers here.
+- Dev: `npm run dev` (vite, one terminal) + `cargo run --no-default-features` in `src-tauri/` (another). HMR works; the Rust side rebuilds manually. `npm run tauri dev` also works but has been flaky under background task managers here — same for plain `npm run dev` (a killed vite orphans the process and keeps port 5173 hostage).
+- Browser dev (no Tauri window): `npm run dev:token` writes `public/dev-token.json` (gitignored), then `npm run dev` and open http://localhost:5173 — `getConnectionInfo` falls back to the token file when IPC is absent. Handy for Playwright-driven DOM verification.
 - Build: `npm run tauri build` → MSI + portable exe in `src-tauri/target/release/bundle/`.
 - Types: `npm run gen:api` after a kimi upgrade (re-snapshot `reference/*.json` first).
 - Tests: `npm test` (vitest). The store reducer is the regression-prone core — `src/state/store.test.ts` pins streaming, per-agent separation, usage accumulation, spliced merging, snapshot guards, outbox. Add cases there whenever touching `applyFrame`/`applySnapshot`. Reducer logic deliberately lives in the store (pure, testable) rather than in `sync.ts` (module-level singleton: socket/watchers/polling).
