@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useApp } from '../state/store'
+import { useApp, type Workspace } from '../state/store'
 import { archiveSession, newSession, refreshSessions, renameSession, runSlashCommand, watchSession } from '../state/sync'
 import type { SessionSummary } from '../api/events'
 
@@ -268,11 +268,16 @@ export function SessionList() {
     for (const list of byWs.values()) {
       list.sort((a, b) => b.updated_at.localeCompare(a.updated_at))
     }
-    return wsOrder.map((id) => ({
-      workspace: workspaces.find((w) => w.id === id),
-      id,
-      sessions: byWs.get(id)!,
-    }))
+    return wsOrder.map((id) => {
+      const sessions = byWs.get(id)!
+      const found = workspaces.find((w) => w.id === id)
+      // Orphaned workspace id (no registry record — e.g. digest sessions under
+      // an unregistered path spelling): label the group from the session's
+      // folder instead of showing the raw id.
+      const cwd = sessions[0]?.metadata?.cwd as string | undefined
+      const fallback = cwd ? (cwd.split(/[\\/]/).filter(Boolean).pop() ?? id) : id
+      return { workspace: found ?? ({ id, name: fallback, root: cwd ?? '' } as Workspace), id, sessions }
+    })
   }, [sessions, workspaces])
 
   return (

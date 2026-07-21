@@ -1,4 +1,4 @@
-import { get, post } from '../api/client'
+import { get, post, ApiError } from '../api/client'
 import { getConnectionInfo } from '../api/connection'
 import { notifyAttention } from '../api/notify'
 import { KimiSocket } from '../api/ws'
@@ -566,6 +566,28 @@ export async function watchSession(id: string): Promise<void> {
   try {
     snap = await get<Snapshot>(`/sessions/${id}/snapshot`)
   } catch (e) {
+    // Orphaned sessions (their workspace record is missing, e.g. headless
+    // digest runs under an unregistered path spelling) 404 on /snapshot but
+    // stay readable via /transcript and /messages — render history read-only
+    // instead of surfacing an error.
+    if (e instanceof ApiError && e.status === 40401) {
+      console.warn('snapshot 404; falling back to transcript/messages', id)
+      if (!(await pullTranscript(id))) {
+        try {
+          const res = await get<{ items: Snapshot['messages']['items']; has_more?: boolean }>(
+            `/sessions/${id}/messages?page_size=100`,
+          )
+          if (res.items?.length) {
+            useApp.getState().setMessages(id, [...res.items].reverse(), Boolean(res.has_more))
+          }
+        } catch (e2) {
+          console.error('fallback history pull failed', id, e2)
+        }
+      }
+      useApp.getState().markSynced(id)
+      useApp.getState().setSyncIssue(null)
+      return
+    }
     console.error('snapshot failed', id, e)
     useApp.getState().markUnsynced(id)
     useApp.getState().setSyncIssue(`snapshot failed for ${id.slice(8, 16)}: ${e instanceof Error ? e.message : e}`)

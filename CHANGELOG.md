@@ -9,6 +9,7 @@
 ### Fixed
 
 - **`<cron-fire>` envelopes no longer render as raw XML in the chat** — same control-plane stripping as reminders/notifications.
+- **Orphaned sessions render instead of erroring** — sessions whose workspace record is missing (e.g. headless digest runs under an unregistered path spelling) 404 on `/snapshot`; the app now falls back to `/transcript` (0.28) or `/messages` and renders history read-only, and the sidebar labels their group from the session's folder instead of the raw `WD_…` workspace id.
 
 ## v0.1.6
 
