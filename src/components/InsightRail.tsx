@@ -92,7 +92,7 @@ function ConfigRow({
 }
 
 /** One background task row; expands to show the live log tail (output_preview). */
-function TaskRow({ sessionId, task }: { sessionId: string; task: TaskItem }) {
+export function TaskRow({ sessionId, task }: { sessionId: string; task: TaskItem }) {
   const [open, setOpen] = useState(false)
   const [detail, setDetail] = useState<TaskItem | null>(null)
 

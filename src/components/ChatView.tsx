@@ -6,6 +6,7 @@ import type { ChatMessage, SubagentRecord, ToolCallRecord } from '../api/events'
 import { Markdown } from './Markdown'
 import { ThinkingBlock } from './ThinkingBlock'
 import { ToolCard } from './ToolCard'
+import { TaskRow } from './InsightRail'
 
 /** Best-effort render source for a history image block (the daemon stores
  *  `source.kind: 'url'` with a data URL; live blocks may carry raw base64). */
@@ -113,6 +114,7 @@ export function ChatView({ sessionId }: { sessionId: string }) {
   const lastTopRef = useRef(0)
   const lastHeightRef = useRef(0)
   const [loadingOlder, setLoadingOlder] = useState(false)
+  const [tasksOpen, setTasksOpen] = useState(false)
 
   const ready = !!s
 
@@ -140,8 +142,8 @@ export function ChatView({ sessionId }: { sessionId: string }) {
   const liveCalls = Object.values(s.toolCalls).filter(
     (c) => c.status === 'running' && (c.agentId ?? 'main') === 'main',
   )
-  const runningTasks = s.tasks.filter((t) => t.status === 'running').length
-  const backgroundBusy = !s.streaming.active && s.busy && !s.mainTurnActive && runningTasks > 0
+  const running = s.tasks.filter((t) => t.status === 'running')
+  const backgroundBusy = !s.streaming.active && s.busy && !s.mainTurnActive && running.length > 0
 
   return (
     <div
@@ -201,9 +203,24 @@ export function ChatView({ sessionId }: { sessionId: string }) {
         )}
 
         {backgroundBusy && (
-          <div className="flex items-center gap-2 text-xs text-zinc-500">
-            <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-amber-400/70" />
-            {runningTasks} background task{runningTasks > 1 ? 's' : ''} running — agent idle
+          <div className="rounded-md border border-zinc-800/60">
+            <button
+              onClick={() => setTasksOpen((o) => !o)}
+              className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-xs text-zinc-500 hover:bg-zinc-800/40"
+            >
+              <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-amber-400/70" />
+              <span className="flex-1">
+                {running.length} background task{running.length > 1 ? 's' : ''} running — agent idle
+              </span>
+              <span className="text-zinc-600">{tasksOpen ? '▾' : '▸'}</span>
+            </button>
+            {tasksOpen && (
+              <div className="border-t border-zinc-800/60 px-2 py-1">
+                {running.map((t) => (
+                  <TaskRow key={t.id} sessionId={sessionId} task={t} />
+                ))}
+              </div>
+            )}
           </div>
         )}
 

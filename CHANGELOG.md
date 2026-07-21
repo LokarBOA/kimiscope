@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- **Background-task indicator expands inline** — the chat's "N background tasks running — agent idle" line is now a toggle that lists the running tasks right there in the feed, each with the same expandable live log tail as the rail's Tasks rows.
+
 ### Fixed
 
 - **New sessions verify their profile actually stuck** — a dropped profile write (seen on daemon warm-up edges) used to surface only as `model.not_configured` on the first prompt. The app now re-reads `/status` after profiling, retries once, and tells you to pick a model in the rail if it still didn't take.
