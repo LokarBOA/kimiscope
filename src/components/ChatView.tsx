@@ -111,6 +111,7 @@ export function ChatView({ sessionId }: { sessionId: string }) {
   const contentRef = useRef<HTMLDivElement>(null)
   const stickRef = useRef(true)
   const lastTopRef = useRef(0)
+  const lastHeightRef = useRef(0)
   const [loadingOlder, setLoadingOlder] = useState(false)
 
   const ready = !!s
@@ -147,12 +148,15 @@ export function ChatView({ sessionId }: { sessionId: string }) {
       ref={scrollRef}
       onScroll={(e) => {
         const el = e.currentTarget
-        // Unstick only when the position moved UP (user scrolled back).
-        // Content growth — images decoding after a snap, streaming deltas —
-        // never reduces scrollTop, so it can't falsely read as a scroll-up.
-        if (el.scrollTop < lastTopRef.current - 1) stickRef.current = false
+        // Unstick only on a genuine user scroll-up: position moves up while
+        // height is stable or growing. History replacement (send/splice/pull)
+        // shrinks content transiently and the browser clamps scrollTop down —
+        // a clamp, not a scroll-up, and it must not unstick the follow.
+        const clamping = el.scrollHeight < lastHeightRef.current - 1
+        if (!clamping && el.scrollTop < lastTopRef.current - 1) stickRef.current = false
         else stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
         lastTopRef.current = el.scrollTop
+        lastHeightRef.current = el.scrollHeight
       }}
       className="flex-1 overflow-y-auto px-5 py-4"
     >

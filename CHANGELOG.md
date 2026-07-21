@@ -5,6 +5,7 @@
 ### Fixed
 
 - **New sessions verify their profile actually stuck** — a dropped profile write (seen on daemon warm-up edges) used to surface only as `model.not_configured` on the first prompt. The app now re-reads `/status` after profiling, retries once, and tells you to pick a model in the rail if it still didn't take.
+- **Follow-scroll no longer unsticks on send** — the v0.1.7 fix made unstick depend on scroll position moving up, but sending a message replaces history wholesale and the browser *clamps* scrollTop downward during the transient shrink, which read as a scroll-up. Unstick now also requires the height to be stable or growing — clamps can't trigger it.
 
 ## v0.1.7
 
