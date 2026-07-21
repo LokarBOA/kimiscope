@@ -4,7 +4,7 @@
 
 ### Added
 
-- **Copy button on code blocks** — hovering a fenced code block shows 📋 in its top-right corner; copies the raw code, with a ✓ flash. (Both the shiki-highlighted and plain-fallback render paths.)
+- **Copy buttons for messages and code blocks** — plain-text assistant messages show a hover 📋 (raw markdown, "✓ copied" flash; replaces `/copy`), and every fenced code block gets one in its top-right corner. Rich messages (thinking/tool cards) keep their corners for the expanders.
 
 ## v0.1.6
 

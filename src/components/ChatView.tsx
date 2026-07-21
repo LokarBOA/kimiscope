@@ -73,6 +73,9 @@ function MessageView({
     .filter((b) => b.type === 'text')
     .map((b) => (b as { text: string }).text)
     .join('\n\n')
+  // Copy affordance only on plain-text messages: thinking/tool cards own the
+  // top-right corner for their expanders.
+  const plain = (msg.content ?? []).every((b) => b.type === 'text')
 
   return (
     <div className={isUser ? 'flex justify-end' : ''}>
@@ -83,7 +86,7 @@ function MessageView({
             : 'group relative w-full space-y-2 text-[14px]'
         }
       >
-        {!isUser && copyText && (
+        {!isUser && copyText && plain && (
           <button
             onClick={async () => {
               await navigator.clipboard.writeText(copyText)
