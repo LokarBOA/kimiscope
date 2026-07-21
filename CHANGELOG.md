@@ -6,6 +6,10 @@
 
 - **Copy buttons for messages and code blocks** — plain-text assistant messages show a hover 📋 (raw markdown, "✓ copied" flash; replaces `/copy`), and every fenced code block gets one in its top-right corner. Rich messages (thinking/tool cards) keep their corners for the expanders.
 
+### Fixed
+
+- **`<cron-fire>` envelopes no longer render as raw XML in the chat** — same control-plane stripping as reminders/notifications.
+
 ## v0.1.6
 
 ### Added

@@ -41,4 +41,12 @@ describe('stripSystemEnvelopes', () => {
     const t = 'before\n<kimi-skill-loaded name="x">body</kimi-skill-loaded>\nafter'
     expect(stripSystemEnvelopes(t)).toBe('before\n\nafter')
   })
+
+  it('removes cron-fire envelopes entirely', () => {
+    const t =
+      '<cron-fire jobId="01ABC" cron="23 * * * *" recurring="true" coalescedCount="1" stale="false">\n<prompt>\nHourly check…\n</prompt>\n</cron-fire>'
+    expect(stripSystemEnvelopes(t)).toBe('')
+    const mixed = `real question\n${t}`
+    expect(stripSystemEnvelopes(mixed)).toBe('real question')
+  })
 })

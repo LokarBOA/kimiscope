@@ -7,6 +7,7 @@ const ENVELOPES = [
   /<kimi-skill-loaded\b[^>]*>[\s\S]*?<\/kimi-skill-loaded>/g,
   /<system-reminder\b[^>]*>[\s\S]*?<\/system-reminder>/g,
   /<notification\b[^>]*>[\s\S]*?<\/notification>/g,
+  /<cron-fire\b[^>]*>[\s\S]*?<\/cron-fire>/g,
 ]
 
 /** Strip injected system envelopes from a message text; the remainder is
