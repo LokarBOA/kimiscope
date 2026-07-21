@@ -16,8 +16,12 @@ export async function api<T = unknown>(
   init: RequestInit = {},
 ): Promise<T> {
   const conn = await getConnectionInfo()
+  // A cold daemon can accept TCP while its routes are still warming up —
+  // never let a request hang forever (init awaits these before the socket
+  // and polls start).
   const res = await fetch(`${conn.baseUrl}/api/v1${path}`, {
     ...init,
+    signal: init.signal ?? AbortSignal.timeout(15_000),
     headers: {
       Authorization: `Bearer ${conn.token}`,
       ...(init.body ? { 'Content-Type': 'application/json' } : {}),

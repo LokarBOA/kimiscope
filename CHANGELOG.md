@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.1.6
+
+### Added
+
+- **Sidebar session actions** — hover a session row: ✎ renames inline (double-click the title works too; Enter commits, Esc cancels), and a ⋯ menu offers Fork / Export zip / Archive (archive moved off the row). Replaces the hidden `/title` command for discovery.
+- **Clickable session config in the InsightRail** — the Session section's Model, Thinking, and Mode rows are now dropdowns (same pickers as the composer `/` menu, incl. the prompt-cache footnote), and the plan badge toggles plan mode on click.
+- **Message copy button** — hovering an assistant message shows 📋; copies the raw markdown, with a "✓ copied" flash. Replaces `/copy`.
+- **Native folder picker** — "Open folder as project" has a Browse… button backed by the OS dialog (tauri-plugin-dialog); the text field stays as fallback.
+
+### Fixed
+
+- **Streaming text no longer changes size on completion** — the streaming markdown rendered at the 16px page default while finished messages use 14px, so replies visibly snapped smaller when the turn ended.
+- **Cold start could hang forever** — a just-spawned daemon accepts TCP before its routes are ready; `initApp` awaited un-timed history fetches before the socket and polls started, so a cold boot rendered nothing until the app was restarted. The REST client now has a 15s timeout, and the Rust side waits for a real `healthz` HTTP 200 instead of a bare TCP connect.
+- **Queue-row steer button copy** — read like it injected immediately; it steers (next step boundary), and now says so.
+
 ## v0.1.5
 
 ### Added

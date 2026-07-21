@@ -27,6 +27,7 @@ function MessageView({
   toolCalls: Record<string, ToolCallRecord>
   subagents: Record<string, SubagentRecord>
 }) {
+  const [copied, setCopied] = useState(false)
   if (msg.role === 'tool') return null // results render inside their tool card
   const isUser = msg.role === 'user'
   // Runtime control-plane envelopes (system reminders, notifications) arrive as
@@ -68,15 +69,33 @@ function MessageView({
   })
   if (blocks.length === 0) return null
 
+  const copyText = (msg.content ?? [])
+    .filter((b) => b.type === 'text')
+    .map((b) => (b as { text: string }).text)
+    .join('\n\n')
+
   return (
     <div className={isUser ? 'flex justify-end' : ''}>
       <div
         className={
           isUser
             ? 'max-w-[80%] rounded-lg bg-zinc-800 px-3.5 py-2 text-[14px]'
-            : 'w-full space-y-2 text-[14px]'
+            : 'group relative w-full space-y-2 text-[14px]'
         }
       >
+        {!isUser && copyText && (
+          <button
+            onClick={async () => {
+              await navigator.clipboard.writeText(copyText)
+              setCopied(true)
+              setTimeout(() => setCopied(false), 1500)
+            }}
+            title="Copy message"
+            className="absolute top-0 right-0 rounded px-1 text-[11px] text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-800 hover:text-zinc-300"
+          >
+            {copied ? '✓ copied' : '📋'}
+          </button>
+        )}
         {blocks}
       </div>
     </div>
@@ -153,7 +172,7 @@ export function ChatView({ sessionId }: { sessionId: string }) {
         ))}
 
         {s.streaming.active && (
-          <div className="space-y-2">
+          <div className="space-y-2 text-[14px]">
             {s.streaming.thinking && <ThinkingBlock text={s.streaming.thinking} streaming />}
             {s.streaming.assistant && <Markdown>{s.streaming.assistant}</Markdown>}
             {liveCalls.map((c) => (

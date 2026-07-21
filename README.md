@@ -1,41 +1,30 @@
 # KimiScope
 
-A standalone desktop app for [Kimi Code](https://www.kimi.com/code) — rich, reliable UI on top of the kimi daemon's local API.
+**A window into Kimi, built by Kimi.**
 
-- Live streaming with collapsible **thinking** blocks
-- **Todo list**, context/token usage, files touched, tasks, goals in the insight rail
-- **Tool cards**: terminal-style Bash, diffs for edits, nested **subagent** panels
-- **Approvals & questions** in the UI (all sub-questions, works with yolo/auto/manual)
-- Queue / steer / stop control of running turns, local terminal pane, session diffs
-- Multi-project sidebar; sessions keep streaming in the background
-- Crash-proof: sessions live in the daemon, the window is a disposable renderer
-- Optional agent powers via MCP: browser automation, screen vision + GUI control, GitHub, memory
+KimiScope is a standalone desktop app for [Kimi Code](https://www.kimi.com/code) — a rich, reliable UI on top of the kimi daemon's local REST + WebSocket API. Sessions live in the daemon; the window is a disposable renderer.
 
-## Install (fresh machine)
+![KimiScope](docs/screenshot.png)
 
-KimiScope itself is one installer, but the full setup has a few system dependencies.
-**An agent (or human) can perform all of these:**
+- **Live streaming** with collapsible thinking blocks and inline image results (with source-file links)
+- **Tool cards**: terminal-style Bash, diffs for edits, nested subagent panels
+- **Insight rail**: todos, context/token usage, background tasks, goals, files touched, clickable session config (model / thinking / permission mode / plan)
+- **Approvals & questions** in the UI (works with yolo/auto/manual)
+- Queue / steer / stop control of running turns, per-session composer drafts, queued-prompt editing
+- **Multi-project sidebar** with turn vs background activity indicators (⚡ mid-turn, ⟳ background tasks), rename/fork/export per session
+- Local terminal pane, session diffs, crash-proof resync
 
-```powershell
-# 1. Node.js (includes npm) — required by the kimi CLI and npx-based MCP servers
-winget install OpenJS.NodeJS
+## Install
 
-# 2. Kimi Code CLI — provides the daemon KimiScope renders against
-npm install -g @moonshot-ai/kimi-code
+**Requirements:** Windows, [Node.js](https://nodejs.org), and the [Kimi Code CLI](https://www.kimi.com/code) (`npm install -g @moonshot-ai/kimi-code`, then `kimi login` once). Compatible with kimi 0.27 and 0.28+.
 
-# 3. Log in (device-code flow, opens a browser once)
-kimi login
+**Download the installer from [Releases](../../releases)** (MSI or NSIS `KimiScope_*_setup.exe`) and run it. KimiScope auto-starts the local kimi server (`kimi web`) and reads its token — no further wiring.
 
-# 4. uv — required for the Windows GUI-control server (hands)
-winget install astral-sh.uv        # or: pip install uv
-```
-
-Then install KimiScope from `src-tauri/target/release/bundle/` (MSI or NSIS `KimiScope_*_setup.exe`).
-The app auto-starts the daemon and reads its token from `~/.kimi-code/server.token` — no further wiring.
+> Beta notes: Windows only for now, and no auto-update — new versions are a manual reinstall from Releases.
 
 ## Optional agent powers (MCP)
 
-These are configured in `~/.kimi-code/mcp.json` (toggleable in the app's Settings ⚙). Example:
+Configured in `~/.kimi-code/mcp.json` (toggleable in Settings ⚙). Example:
 
 ```json
 {
@@ -51,11 +40,15 @@ These are configured in `~/.kimi-code/mcp.json` (toggleable in the app's Setting
 }
 ```
 
-- Everything above **self-downloads on first use** (npx/uvx fetch the servers; Playwright fetches its Chromium on first browser call).
-- Restart the daemon after editing `mcp.json` (the Settings ⚙ restart button; on 0.28+ there is no kill subcommand — the app kills the instance pid directly).
-- **GitHub tools** (optional): requires the GitHub CLI (`winget install GitHub.cli`) and `gh auth login`; then add the remote server with your token — see `AGENTS.md` for the exact entry.
-- **Logged-in browser** (optional): a dedicated Edge profile entry (`playwright-personal`) is in `AGENTS.md`.
-- Caution: yolo permission mode auto-approves MCP tool calls. Keep GUI-control servers scoped like the example above (no Registry/PowerShell/Process).
+- Everything above self-downloads on first use.
+- Restart the daemon after editing `mcp.json` (Settings ⚙ restart button).
+- Caution: yolo permission mode auto-approves MCP tool calls. Keep GUI-control servers scoped like the example above.
+
+## Built by Kimi, for Kimi
+
+KimiScope is itself a Kimi Code project. The architecture, protocol probing, implementation, tests, docs, and release engineering were driven by a Kimi agent working through the same daemon API the app renders — with human direction and review at every step. The feature list is equally dogfooded: the inline image results, background-task visibility, and presence indicators all came from real Kimi sessions asking for a better window into their own work.
+
+If you're evaluating Kimi Code, this repo doubles as a live sample of what a session can carry end-to-end.
 
 ## Dev
 
@@ -68,3 +61,7 @@ Or in a plain browser (no Tauri window, e.g. for Playwright): `npm run dev:token
 
 Build: `npm run tauri build` (kill any running KimiScope.exe first — Windows locks it).
 Requires Rust + Node. Architecture, protocol facts, and pitfalls: `AGENTS.md`.
+
+## License
+
+MIT

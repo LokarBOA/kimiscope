@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from '../state/store'
-import { archiveSession, newSession, refreshSessions, watchSession } from '../state/sync'
+import { archiveSession, newSession, refreshSessions, renameSession, runSlashCommand, watchSession } from '../state/sync'
 import type { SessionSummary } from '../api/events'
 
 function timeAgo(iso: string): string {
@@ -19,9 +19,38 @@ function SessionRow({ s }: { s: SessionSummary }) {
   const turnActive = live?.mainTurnActive ?? s.main_turn_active
   const pending = (live?.pendingInteraction ?? s.pending_interaction) !== 'none'
   const archived = s.archived === true
+  const [editing, setEditing] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   // Completion badge: a background task finished recently in a session you're not viewing.
   const showDoneBadge =
     !archived && live?.recentTaskDone != null && Date.now() - live.recentTaskDone < 15 * 60_000 && s.id !== activeId
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select()
+  }, [editing])
+
+  // Close the ⋯ menu on any outside click.
+  useEffect(() => {
+    if (!menuOpen) return
+    const close = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false)
+    }
+    window.addEventListener('mousedown', close)
+    return () => window.removeEventListener('mousedown', close)
+  }, [menuOpen])
+
+  async function commitRename() {
+    const text = inputRef.current?.value.trim() ?? ''
+    setEditing(false)
+    if (text && text !== (s.title || '')) await renameSession(s.id, text.slice(0, 200))
+  }
+
+  function archive() {
+    if (busy && !window.confirm(`"${s.title || 'Untitled'}" is mid-turn — archive anyway?`)) return
+    void archiveSession(s.id)
+  }
 
   return (
     <div
@@ -32,7 +61,7 @@ function SessionRow({ s }: { s: SessionSummary }) {
         void watchSession(s.id)
       }}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !editing) {
           setActive(s.id)
           void watchSession(s.id)
         }
@@ -54,9 +83,32 @@ function SessionRow({ s }: { s: SessionSummary }) {
                   : 'bg-zinc-700'
           }`}
         />
-        <span className="min-w-0 flex-1 truncate text-[13px] text-zinc-200">
-          {s.title || 'Untitled'}
-        </span>
+        {editing ? (
+          <input
+            ref={inputRef}
+            defaultValue={s.title || ''}
+            placeholder="Session title"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              e.stopPropagation()
+              if (e.key === 'Enter') void commitRename()
+              if (e.key === 'Escape') setEditing(false)
+            }}
+            onBlur={() => void commitRename()}
+            className="min-w-0 flex-1 rounded border border-zinc-600 bg-zinc-900 px-1 py-0 text-[13px] text-zinc-100 outline-none focus:border-sky-600"
+          />
+        ) : (
+          <span
+            className="min-w-0 flex-1 truncate text-[13px] text-zinc-200"
+            title="Double-click to rename"
+            onDoubleClick={(e) => {
+              e.stopPropagation()
+              if (!archived) setEditing(true)
+            }}
+          >
+            {s.title || 'Untitled'}
+          </span>
+        )}
         {showDoneBadge && (
           <span title="Background task finished" className="shrink-0 text-[11px] text-emerald-400">
             ✓
@@ -65,18 +117,64 @@ function SessionRow({ s }: { s: SessionSummary }) {
         {archived ? (
           <span className="shrink-0 text-[10px] text-zinc-600 uppercase">archived</span>
         ) : (
-          <button
-            title="Archive session"
-            onClick={(e) => {
-              e.stopPropagation()
-              if (busy && !window.confirm(`"${s.title || 'Untitled'}" is mid-turn — archive anyway?`))
-                return
-              void archiveSession(s.id)
-            }}
-            className="shrink-0 rounded px-1 text-[11px] text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-700 hover:text-zinc-300"
-          >
-            ✕
-          </button>
+          <>
+            <button
+              title="Rename session"
+              onClick={(e) => {
+                e.stopPropagation()
+                setEditing(true)
+              }}
+              className="shrink-0 rounded px-1 text-[11px] text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-700 hover:text-sky-300"
+            >
+              ✎
+            </button>
+            <div ref={menuRef} className="relative shrink-0">
+              <button
+                title="Session actions"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setMenuOpen((o) => !o)
+                }}
+                className="rounded px-1 text-[11px] text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-700 hover:text-zinc-300"
+              >
+                ⋯
+              </button>
+              {menuOpen && (
+                <div className="absolute right-0 z-50 mt-0.5 w-36 overflow-hidden rounded-md border border-zinc-700 bg-zinc-900 py-0.5 shadow-xl">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setMenuOpen(false)
+                      void runSlashCommand(s.id, '/fork')
+                    }}
+                    className="block w-full px-3 py-1.5 text-left text-[12px] text-zinc-300 hover:bg-zinc-800"
+                  >
+                    ⑂ Fork session
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setMenuOpen(false)
+                      void runSlashCommand(s.id, '/export')
+                    }}
+                    className="block w-full px-3 py-1.5 text-left text-[12px] text-zinc-300 hover:bg-zinc-800"
+                  >
+                    ⇩ Export zip
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setMenuOpen(false)
+                      archive()
+                    }}
+                    className="block w-full px-3 py-1.5 text-left text-[12px] text-red-400/90 hover:bg-zinc-800"
+                  >
+                    ✕ Archive session
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
         )}
         <span className="shrink-0 text-[11px] text-zinc-600 group-hover:hidden">
           {timeAgo(s.updated_at)}
@@ -111,11 +209,31 @@ function OpenFolder() {
         setOpen(false)
       }}
     >
+      <button
+        type="button"
+        title="Browse for a folder"
+        onClick={async () => {
+          try {
+            const { open: pick } = await import('@tauri-apps/plugin-dialog')
+            const dir = await pick({ directory: true, title: 'Open folder as project' })
+            if (typeof dir === 'string') {
+              void newSession(dir)
+              setPath('')
+              setOpen(false)
+            }
+          } catch {
+            // No Tauri IPC (browser dev) — the text field below is the fallback.
+          }
+        }}
+        className="rounded-md bg-sky-700 px-2 py-1 text-[12px] text-white hover:bg-sky-600"
+      >
+        Browse…
+      </button>
       <input
         autoFocus
         value={path}
         onChange={(e) => setPath(e.target.value)}
-        placeholder="C:\\path\\to\\project"
+        placeholder="C:\path\to\project (or Browse)"
         className="min-w-0 flex-1 rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-[12px] text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-zinc-500"
       />
       <button

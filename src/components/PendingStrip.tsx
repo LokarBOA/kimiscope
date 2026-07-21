@@ -58,13 +58,13 @@ export function PendingStrip({ sessionId }: { sessionId: string }) {
               ✎ edit
             </button>
             <button
-              title="Steer immediately — inject into the active turn"
+              title="Steer — the model picks it up at the next step boundary"
               onClick={() =>
                 void post(`/sessions/${sessionId}/prompts:steer`, { prompt_ids: [q.prompt_id] })
               }
               className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-800 hover:text-amber-400"
             >
-              ⚡ steer now
+              ⇢ steer
             </button>
             <button
               title="Remove from queue"

@@ -31,9 +31,28 @@ fn kimi_home() -> PathBuf {
   PathBuf::from(home).join(".kimi-code")
 }
 
-fn tcp_alive(port: u16) -> bool {
+/// True when the server answers `GET /api/v1/healthz` over HTTP. A listening
+/// TCP socket is not enough — a cold server accepts connections while its
+/// routes are still warming up, and clients must not be handed over yet.
+fn http_ready(port: u16) -> bool {
   let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, port));
-  TcpStream::connect_timeout(&addr, Duration::from_millis(400)).is_ok()
+  let Ok(mut s) = TcpStream::connect_timeout(&addr, Duration::from_millis(400)) else {
+    return false;
+  };
+  let _ = s.set_read_timeout(Some(Duration::from_millis(800)));
+  let _ = s.set_write_timeout(Some(Duration::from_millis(400)));
+  if std::io::Write::write_all(&mut s, b"GET /api/v1/healthz HTTP/1.0\r\nHost: 127.0.0.1\r\n\r\n")
+    .is_err()
+  {
+    return false;
+  }
+  let mut buf = [0u8; 64];
+  let n = match std::io::Read::read(&mut s, &mut buf) {
+    Ok(n) => n,
+    Err(_) => return false,
+  };
+  let head = String::from_utf8_lossy(&buf[..n]);
+  head.starts_with("HTTP/1.1 200") || head.starts_with("HTTP/1.0 200")
 }
 
 fn read_lock_port(home: &PathBuf) -> Option<u16> {
@@ -74,17 +93,17 @@ fn read_instances(home: &PathBuf) -> Vec<InstanceInfo> {
 fn discover_alive_port(home: &PathBuf) -> Option<u16> {
   for i in read_instances(home) {
     if let Some(port) = i.port {
-      if tcp_alive(port) {
+      if http_ready(port) {
         return Some(port);
       }
     }
   }
   if let Some(port) = read_lock_port(home) {
-    if tcp_alive(port) {
+    if http_ready(port) {
       return Some(port);
     }
   }
-  if tcp_alive(DEFAULT_PORT) {
+  if http_ready(DEFAULT_PORT) {
     return Some(DEFAULT_PORT);
   }
   None
@@ -356,6 +375,7 @@ mod tests {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_dialog::init())
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(

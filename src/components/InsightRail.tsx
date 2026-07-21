@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { useApp } from '../state/store'
-import { getTaskDetail, goalControl, goalCreate } from '../state/sync'
+import { getTaskDetail, goalControl, goalCreate, runSlashCommand } from '../state/sync'
+import { THINKING_LEVELS } from '../state/commands'
 import type { GoalState, TaskItem, TodoItem, ToolCallRecord } from '../api/events'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -11,6 +12,81 @@ function Section({ title, children }: { title: string; children: React.ReactNode
         {title}
       </div>
       {children}
+    </div>
+  )
+}
+
+interface ConfigOption {
+  key: string
+  label: string
+  hint?: string
+}
+
+/** One session-config row: value on the right opens a dropdown that dispatches
+ *  the matching `/command` (same path as the composer menu). */
+function ConfigRow({
+  label,
+  value,
+  options,
+  footnote,
+  onPick,
+}: {
+  label: string
+  value: string
+  options: ConfigOption[]
+  footnote?: string
+  onPick: (key: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    window.addEventListener('mousedown', close)
+    return () => window.removeEventListener('mousedown', close)
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative flex items-center justify-between gap-2">
+      <span>{label}</span>
+      {options.length === 0 ? (
+        <span className="truncate text-zinc-300">{value}</span>
+      ) : (
+        <>
+          <button
+            onClick={() => setOpen((o) => !o)}
+            title={`Change ${label.toLowerCase()}`}
+            className="truncate rounded px-1.5 py-0.5 text-zinc-300 hover:bg-zinc-800 hover:text-sky-300"
+          >
+            {value} ▾
+          </button>
+          {open && (
+            <div className="absolute right-0 z-50 mt-6 max-h-60 w-56 overflow-y-auto rounded-md border border-zinc-700 bg-zinc-900 py-0.5 shadow-xl">
+              {options.map((o) => (
+                <button
+                  key={o.key}
+                  onClick={() => {
+                    setOpen(false)
+                    onPick(o.key)
+                  }}
+                  className="block w-full px-3 py-1.5 text-left text-[12px] text-zinc-300 hover:bg-zinc-800"
+                >
+                  {o.label}
+                  {o.hint && <span className="ml-1.5 text-zinc-600">{o.hint}</span>}
+                </button>
+              ))}
+              {footnote && (
+                <div className="border-t border-zinc-800 px-3 py-1.5 text-[10px] text-zinc-600">
+                  {footnote}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
@@ -229,9 +305,11 @@ function McpSection() {
 
 export function InsightRail({ sessionId }: { sessionId: string }) {
   const s = useApp((st) => st.sessionState[sessionId])
+  const models = useApp((st) => st.models)
   const touched = useTouchedFiles(s?.toolCalls ?? {})
   if (!s) return null
   const usage = s.usage
+  const planOn = Boolean(s.summary?.agent_config?.plan_mode)
   const ctxPct =
     usage && usage.context_limit > 0
       ? Math.min(100, (usage.context_tokens / usage.context_limit) * 100)
@@ -336,39 +414,55 @@ export function InsightRail({ sessionId }: { sessionId: string }) {
 
       <Section title="Session">
         <div className="space-y-1 text-[12px] text-zinc-400">
+          <ConfigRow
+            label="Model"
+            value={s.summary?.agent_config?.model || '—'}
+            options={models.map((m) => ({
+              key: m.model,
+              label: m.display_name || m.model,
+              hint: m.provider,
+            }))}
+            footnote="Switching invalidates the prompt cache."
+            onPick={(m) => void runSlashCommand(sessionId, `/model ${m}`)}
+          />
+          <ConfigRow
+            label="Thinking"
+            value={s.summary?.agent_config?.thinking || '—'}
+            options={THINKING_LEVELS.map((l) => ({ key: l, label: l }))}
+            footnote="Switching invalidates the prompt cache."
+            onPick={(l) => void runSlashCommand(sessionId, `/thinking ${l}`)}
+          />
+          <ConfigRow
+            label="Mode"
+            value={s.summary?.agent_config?.permission_mode || '—'}
+            options={[
+              { key: 'yolo', label: 'yolo', hint: 'auto-approve tool calls' },
+              { key: 'auto', label: 'auto', hint: 'fully autonomous' },
+              { key: 'manual', label: 'manual', hint: 'approve each call' },
+            ]}
+            onPick={(m) => void runSlashCommand(sessionId, `/${m}`)}
+          />
           <div className="flex justify-between gap-2">
-            <span>Model</span>
-            <span className="truncate text-zinc-300">
-              {s.summary?.agent_config?.model || '—'}
+            <span>Flags</span>
+            <span className="flex gap-1">
+              <button
+                onClick={() => void runSlashCommand(sessionId, planOn ? '/plan off' : '/plan on')}
+                title={planOn ? 'Plan mode on — click to disable' : 'Plan mode off — click to enable'}
+                className={`rounded px-1.5 py-px text-[10px] ${
+                  planOn
+                    ? 'bg-violet-900/50 text-violet-300 hover:bg-violet-800/60'
+                    : 'bg-zinc-800 text-zinc-600 hover:bg-zinc-700 hover:text-zinc-400'
+                }`}
+              >
+                plan
+              </button>
+              {s.summary?.agent_config?.swarm_mode && (
+                <span className="rounded bg-emerald-900/50 px-1.5 py-px text-[10px] text-emerald-300">
+                  swarm
+                </span>
+              )}
             </span>
           </div>
-          <div className="flex justify-between gap-2">
-            <span>Thinking</span>
-            <span className="text-zinc-300">{s.summary?.agent_config?.thinking || '—'}</span>
-          </div>
-          <div className="flex justify-between gap-2">
-            <span>Mode</span>
-            <span className="text-zinc-300">
-              {s.summary?.agent_config?.permission_mode || '—'}
-            </span>
-          </div>
-          {(s.summary?.agent_config?.plan_mode || s.summary?.agent_config?.swarm_mode) && (
-            <div className="flex justify-between gap-2">
-              <span>Flags</span>
-              <span className="flex gap-1">
-                {s.summary?.agent_config?.plan_mode && (
-                  <span className="rounded bg-violet-900/50 px-1.5 py-px text-[10px] text-violet-300">
-                    plan
-                  </span>
-                )}
-                {s.summary?.agent_config?.swarm_mode && (
-                  <span className="rounded bg-emerald-900/50 px-1.5 py-px text-[10px] text-emerald-300">
-                    swarm
-                  </span>
-                )}
-              </span>
-            </div>
-          )}
           <div className="flex justify-between gap-2">
             <span>Folder</span>
             <span className="truncate text-zinc-300" title={s.summary?.metadata?.cwd}>
