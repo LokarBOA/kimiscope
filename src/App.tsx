@@ -117,7 +117,7 @@ export default function App() {
   // Restore last open session, and allow #<session-id> deep links (debug/repro).
   useEffect(() => {
     const fromHash = window.location.hash.replace(/^#/, '')
-    const fromStore = localStorage.getItem('kimiharness.activeSession')
+    const fromStore = localStorage.getItem('kimiscope.activeSession')
     const id = fromHash || fromStore
     if (id) useApp.getState().setActiveSession(id)
     const onHash = () => {
@@ -129,7 +129,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (activeId) localStorage.setItem('kimiharness.activeSession', activeId)
+    if (activeId) localStorage.setItem('kimiscope.activeSession', activeId)
   }, [activeId])
 
   if (initError) {

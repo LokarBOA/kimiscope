@@ -32,7 +32,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [restarting, setRestarting] = useState(false)
   const [stale, setStale] = useState(false)
   const [permMode, setPermMode] = useState(
-    () => localStorage.getItem('kimiharness.permissionMode') ?? 'yolo',
+    () => localStorage.getItem('kimiscope.permissionMode') ?? 'yolo',
   )
 
   async function load() {
@@ -150,7 +150,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             value={permMode}
             onChange={(e) => {
               setPermMode(e.target.value)
-              localStorage.setItem('kimiharness.permissionMode', e.target.value)
+              localStorage.setItem('kimiscope.permissionMode', e.target.value)
             }}
             className="w-full rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1.5 text-[13px] text-zinc-200 outline-none"
           >

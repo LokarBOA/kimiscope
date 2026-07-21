@@ -23,7 +23,7 @@ export class KimiSocket {
   private pending = new Map<string, PendingRequest>()
   private reconnectDelay = 500
   private closedByUser = false
-  private clientId = `kimiharness_${Math.random().toString(36).slice(2, 10)}`
+  private clientId = `kimiscope_${Math.random().toString(36).slice(2, 10)}`
   private url: string
   private token: string
   private handlers: SocketHandlers

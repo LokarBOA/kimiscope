@@ -756,7 +756,7 @@ export async function newSession(cwd: string): Promise<string | null> {
     await post(`/sessions/${id}/profile`, {
       agent_config: {
         model,
-        permission_mode: localStorage.getItem('kimiharness.permissionMode') ?? 'yolo',
+        permission_mode: localStorage.getItem('kimiscope.permissionMode') ?? 'yolo',
       },
     }).catch((e) => console.error('profile failed', e))
     await refreshSessions()
