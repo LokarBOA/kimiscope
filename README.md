@@ -6,7 +6,7 @@ A standalone desktop app for [Kimi Code](https://www.kimi.com/code) — rich, re
 - **Todo list**, context/token usage, files touched, tasks, goals in the insight rail
 - **Tool cards**: terminal-style Bash, diffs for edits, nested **subagent** panels
 - **Approvals & questions** in the UI (all sub-questions, works with yolo/auto/manual)
-- Queue / steer / interrupt control of running turns, local terminal pane, session diffs
+- Queue / steer / stop control of running turns, local terminal pane, session diffs
 - Multi-project sidebar; sessions keep streaming in the background
 - Crash-proof: sessions live in the daemon, the window is a disposable renderer
 - Optional agent powers via MCP: browser automation, screen vision + GUI control, GitHub, memory
@@ -52,7 +52,7 @@ These are configured in `~/.kimi-code/mcp.json` (toggleable in the app's Setting
 ```
 
 - Everything above **self-downloads on first use** (npx/uvx fetch the servers; Playwright fetches its Chromium on first browser call).
-- Restart the daemon after editing `mcp.json` (`kimi server kill`, or the Settings ⚙ restart button).
+- Restart the daemon after editing `mcp.json` (the Settings ⚙ restart button; on 0.28+ there is no kill subcommand — the app kills the instance pid directly).
 - **GitHub tools** (optional): requires the GitHub CLI (`winget install GitHub.cli`) and `gh auth login`; then add the remote server with your token — see `AGENTS.md` for the exact entry.
 - **Logged-in browser** (optional): a dedicated Edge profile entry (`playwright-personal`) is in `AGENTS.md`.
 - Caution: yolo permission mode auto-approves MCP tool calls. Keep GUI-control servers scoped like the example above (no Registry/PowerShell/Process).

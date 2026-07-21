@@ -4348,6 +4348,288 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sessions/{session_id}/transcript": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Turn-granular session transcript page: live sessions read the in-memory store (wire-records backfill awaited per requested agent), cold sessions rebuild the requested agent from the persisted wire records */
+        get: {
+            parameters: {
+                query: {
+                    agent_id: string;
+                    before_turn?: string;
+                    after_turn?: string;
+                    page_size?: number;
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                agent_id: string;
+                                items: ({
+                                    /** @enum {string} */
+                                    kind: "turn";
+                                    turnId: string;
+                                    ordinal: number;
+                                    /** @enum {string} */
+                                    state: "queued" | "running" | "completed" | "failed" | "cancelled";
+                                    origin: {
+                                        /** @enum {string} */
+                                        kind: "user";
+                                        payload?: unknown;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "cron";
+                                        taskId?: string;
+                                        payload?: unknown;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "task";
+                                        taskId: string;
+                                        payload?: unknown;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "hook";
+                                        payload?: unknown;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "compaction";
+                                        payload?: unknown;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "side";
+                                        payload?: unknown;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "other";
+                                        payload?: unknown;
+                                    };
+                                    prompt?: string;
+                                    attachmentIds?: string[];
+                                    steps: {
+                                        /** @enum {string} */
+                                        kind: "step";
+                                        stepId: string;
+                                        turnId: string;
+                                        ordinal: number;
+                                        /** @enum {string} */
+                                        state: "running" | "completed" | "interrupted" | "failed";
+                                        frames: ({
+                                            /** @enum {string} */
+                                            kind: "text";
+                                            frameId: string;
+                                            /** @enum {string} */
+                                            role: "assistant" | "user";
+                                            text: string;
+                                            attachmentIds?: string[];
+                                            taskId?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "thinking";
+                                            frameId: string;
+                                            text: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "tool";
+                                            frameId: string;
+                                            toolCallId: string;
+                                            name: string;
+                                            view?: string;
+                                            /** @enum {string} */
+                                            state: "running" | "done" | "error";
+                                            input?: unknown;
+                                            output?: unknown;
+                                            display?: unknown;
+                                            error?: string;
+                                            taskId?: string;
+                                            approvalId?: string;
+                                            todoId?: string;
+                                            agentRefs?: {
+                                                agentId: string;
+                                                /** @enum {string} */
+                                                role?: "child" | "member";
+                                            }[];
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "interaction";
+                                            frameId: string;
+                                            interactionId: string;
+                                            /** @enum {string} */
+                                            interactionKind: "approval" | "question";
+                                            toolCallId?: string;
+                                            /** @enum {string} */
+                                            state: "pending" | "approved" | "rejected" | "cancelled" | "answered" | "dismissed";
+                                            request?: unknown;
+                                            response?: unknown;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "notice";
+                                            frameId: string;
+                                            /** @enum {string} */
+                                            level: "error" | "warning" | "info";
+                                            source?: string;
+                                            message: string;
+                                            detail?: unknown;
+                                        })[];
+                                        startedAt?: string;
+                                        endedAt?: string;
+                                    }[];
+                                    startedAt?: string;
+                                    endedAt?: string;
+                                    usage?: {
+                                        inputTokens?: number;
+                                        outputTokens?: number;
+                                        cachedTokens?: number;
+                                        cost?: number;
+                                    };
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "marker";
+                                    markerId: string;
+                                    marker: string;
+                                    payload?: unknown;
+                                    at?: string;
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "taskref";
+                                    refId: string;
+                                    taskId: string;
+                                    at?: string;
+                                })[];
+                                has_more: boolean;
+                                tasks: {
+                                    taskId: string;
+                                    /** @enum {string} */
+                                    kind: "shell" | "subagent" | "tool" | "other";
+                                    /** @enum {string} */
+                                    state: "running" | "completed" | "failed" | "timed_out" | "killed" | "lost";
+                                    detached: boolean;
+                                    description?: string;
+                                    agentId?: string;
+                                    outputTail: string;
+                                    startedAt?: string;
+                                    endedAt?: string;
+                                }[];
+                                /** @default [] */
+                                interactions: {
+                                    interactionId: string;
+                                    /** @enum {string} */
+                                    interactionKind: "approval" | "question";
+                                    toolCallId: string;
+                                    /** @enum {string} */
+                                    state: "pending" | "approved" | "rejected" | "cancelled" | "answered" | "dismissed";
+                                    request?: unknown;
+                                    response?: unknown;
+                                }[];
+                                /** @default [] */
+                                attachments: {
+                                    attachmentId: string;
+                                    mediaType: string;
+                                    name?: string;
+                                    size?: number;
+                                    source?: {
+                                        /** @enum {string} */
+                                        kind: "url";
+                                        url: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "file";
+                                        fileId: string;
+                                    };
+                                    placeholder?: string;
+                                }[];
+                                /** @default [] */
+                                todos: {
+                                    todoId: string;
+                                    items: {
+                                        title: string;
+                                        /** @enum {string} */
+                                        status: "pending" | "in_progress" | "done";
+                                    }[];
+                                    updatedAt?: string;
+                                }[];
+                                meta: {
+                                    goal?: {
+                                        objective: string;
+                                        /** @enum {string} */
+                                        status: "active" | "paused" | "blocked" | "complete";
+                                        completionCriterion?: string;
+                                        budgetUsed?: number;
+                                        budgetLimit?: number;
+                                    };
+                                    modes?: {
+                                        plan?: {
+                                            reviewPath?: string;
+                                        };
+                                        swarm?: {
+                                            trigger?: string;
+                                        };
+                                    };
+                                    /** @enum {string} */
+                                    activity?: "idle" | "turn" | "disposing" | "unknown";
+                                };
+                                agents: {
+                                    agentId: string;
+                                    /** @enum {string} */
+                                    type?: "main" | "sub" | "independent";
+                                    parentAgentId?: string;
+                                    label?: string;
+                                    createdAt?: string;
+                                }[];
+                                pending_interactions: string[];
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        } | {
+                            /** @enum {number} */
+                            code: 40401;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/shutdown": {
         parameters: {
             query?: never;
@@ -4388,213 +4670,6 @@ export interface paths {
                 };
             };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v2/{service}/{method}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    service: string;
-                    method: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Default Response */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    service: string;
-                    method: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Default Response */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v2/session/{session_id}/{service}/{method}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    session_id: string;
-                    service: string;
-                    method: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Default Response */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    session_id: string;
-                    service: string;
-                    method: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Default Response */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v2/session/{session_id}/agent/{agent_id}/{service}/{method}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    session_id: string;
-                    agent_id: string;
-                    service: string;
-                    method: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Default Response */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    session_id: string;
-                    agent_id: string;
-                    service: string;
-                    method: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Default Response */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v2/channels": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Default Response */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;

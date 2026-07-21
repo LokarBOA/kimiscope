@@ -42,16 +42,61 @@ fn read_lock_port(home: &PathBuf) -> Option<u16> {
   v.get("port")?.as_u64().map(|p| p as u16)
 }
 
-fn ensure_server(port: u16) -> Result<bool, String> {
-  if tcp_alive(port) {
-    return Ok(false);
+/// One `server/instances/*.json` record (kimi 0.28+; stale files survive hard
+/// kills, so advertised ports must be probed before use).
+struct InstanceInfo {
+  pid: Option<u64>,
+  port: Option<u16>,
+  started_at_ms: Option<u64>,
+}
+
+fn read_instances(home: &PathBuf) -> Vec<InstanceInfo> {
+  let mut out = Vec::new();
+  if let Ok(dir) = fs::read_dir(home.join("server").join("instances")) {
+    for e in dir.flatten() {
+      let raw = fs::read_to_string(e.path()).ok();
+      let v = raw.and_then(|r| serde_json::from_str::<serde_json::Value>(&r).ok());
+      if let Some(v) = v {
+        out.push(InstanceInfo {
+          pid: v.get("pid").and_then(|p| p.as_u64()),
+          port: v.get("port").and_then(|p| p.as_u64()).map(|p| p as u16),
+          started_at_ms: v.get("started_at").and_then(|s| s.as_u64()),
+        });
+      }
+    }
   }
-  // `kimi server run` spawns/reuses a background daemon and exits once healthy.
-  // The npm shim is a .cmd, so it must go through cmd.exe; CREATE_NO_WINDOW
-  // keeps a console from flashing when launched from the GUI.
+  out.sort_by_key(|i| std::cmp::Reverse(i.started_at_ms.unwrap_or(0)));
+  out
+}
+
+/// Port of a live server, if one answers: 0.28 instance files (newest first,
+/// ports probed), then the 0.27 lock, then the default.
+fn discover_alive_port(home: &PathBuf) -> Option<u16> {
+  for i in read_instances(home) {
+    if let Some(port) = i.port {
+      if tcp_alive(port) {
+        return Some(port);
+      }
+    }
+  }
+  if let Some(port) = read_lock_port(home) {
+    if tcp_alive(port) {
+      return Some(port);
+    }
+  }
+  if tcp_alive(DEFAULT_PORT) {
+    return Some(DEFAULT_PORT);
+  }
+  None
+}
+
+/// Spawn `kimi web` hidden and return immediately. On 0.27 it daemonizes and
+/// exits; on 0.28+ the child IS the foreground server — either way the server
+/// outlives both this spawn and the app itself.
+fn spawn_web(port: u16) -> Result<(), String> {
   let mut cmd = Command::new("cmd");
   cmd
-    .args(["/c", "kimi", "server", "run", "--port", &port.to_string()])
+    .args(["/c", "kimi", "web", "--no-open", "--port", &port.to_string()])
     .stdout(Stdio::null())
     .stderr(Stdio::null());
   #[cfg(windows)]
@@ -60,27 +105,35 @@ fn ensure_server(port: u16) -> Result<bool, String> {
     const CREATE_NO_WINDOW: u32 = 0x08000000;
     cmd.creation_flags(CREATE_NO_WINDOW);
   }
-  let status = cmd
-    .status()
-    .map_err(|e| format!("failed to launch `kimi server run`: {e}"))?;
-  if !status.success() {
-    return Err(format!("`kimi server run` exited with {status}"));
-  }
-  let deadline = Instant::now() + Duration::from_secs(15);
+  cmd
+    .spawn()
+    .map_err(|e| format!("failed to launch `kimi web`: {e}"))?;
+  Ok(())
+}
+
+fn wait_alive(home: &PathBuf, timeout: Duration) -> Option<u16> {
+  let deadline = Instant::now() + timeout;
   while Instant::now() < deadline {
-    if tcp_alive(port) {
-      return Ok(true);
+    if let Some(port) = discover_alive_port(home) {
+      return Some(port);
     }
     std::thread::sleep(Duration::from_millis(250));
   }
-  Err("kimi server did not become healthy within 15s".to_string())
+  None
 }
 
 #[tauri::command]
 fn get_connection_info() -> Result<ConnectionInfo, String> {
   let home = kimi_home();
-  let port = read_lock_port(&home).unwrap_or(DEFAULT_PORT);
-  let spawned = ensure_server(port)?;
+  let (port, spawned) = match discover_alive_port(&home) {
+    Some(p) => (p, false),
+    None => {
+      spawn_web(read_lock_port(&home).unwrap_or(DEFAULT_PORT))?;
+      let p = wait_alive(&home, Duration::from_secs(15))
+        .ok_or_else(|| "kimi web did not become healthy within 15s".to_string())?;
+      (p, true)
+    }
+  };
   let token = fs::read_to_string(home.join("server.token"))
     .map(|t| t.trim().to_string())
     .map_err(|e| format!("could not read {}: {e}", home.join("server.token").display()))?;
@@ -132,8 +185,9 @@ struct McpMeta {
   stale: bool,
 }
 
-/// mcp.json mtime vs daemon start (lock `started_at`) — the daemon only reads
-/// mcp.json at startup, so a newer mtime means a restart is required.
+/// mcp.json mtime vs daemon start — the daemon only reads mcp.json at startup,
+/// so a newer mtime means a restart is required. Start time comes from the
+/// newest 0.28 instance file (ms) or the 0.27 lock (ISO string).
 #[tauri::command]
 fn get_mcp_meta() -> Result<McpMeta, String> {
   let home = kimi_home();
@@ -142,10 +196,13 @@ fn get_mcp_meta() -> Result<McpMeta, String> {
     .and_then(|m| m.modified().ok())
     .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
     .map(|d| d.as_millis() as u64);
-  let daemon_started_ms = fs::read_to_string(home.join("server").join("lock"))
-    .ok()
-    .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
-    .and_then(|v| v.get("started_at").and_then(|s| s.as_str()).and_then(iso_ms));
+  let instance_started = read_instances(&home).into_iter().filter_map(|i| i.started_at_ms).max();
+  let daemon_started_ms = instance_started.or_else(|| {
+    fs::read_to_string(home.join("server").join("lock"))
+      .ok()
+      .and_then(|raw| serde_json::from_str::<serde_json::Value>(&raw).ok())
+      .and_then(|v| v.get("started_at").and_then(|s| s.as_str()).and_then(iso_ms))
+  });
   Ok(McpMeta {
     mcp_json_mtime_ms,
     daemon_started_ms,
@@ -170,24 +227,52 @@ fn set_mcp_enabled(name: &str, enabled: bool) -> Result<(), String> {
 }
 
 /// Restart the daemon so MCP config changes take effect. Active turns die —
-/// the frontend must confirm with the user first.
+/// the frontend must confirm with the user first. 0.28+ has no kill
+/// subcommand, so instance pids are killed directly; `kimi server kill` is the
+/// fallback for pre-0.28 servers.
 #[tauri::command]
 fn restart_daemon() -> Result<(), String> {
-  let mut kill = Command::new("cmd");
-  kill
-    .args(["/c", "kimi", "server", "kill"])
-    .stdout(Stdio::null())
-    .stderr(Stdio::null());
+  let home = kimi_home();
+  let pids: Vec<u64> = read_instances(&home).into_iter().filter_map(|i| i.pid).collect();
+  if !pids.is_empty() {
+    for pid in pids {
+      kill_pid(pid);
+    }
+  } else {
+    let mut kill = Command::new("cmd");
+    kill
+      .args(["/c", "kimi", "server", "kill"])
+      .stdout(Stdio::null())
+      .stderr(Stdio::null());
+    #[cfg(windows)]
+    {
+      use std::os::windows::process::CommandExt;
+      const CREATE_NO_WINDOW: u32 = 0x08000000;
+      kill.creation_flags(CREATE_NO_WINDOW);
+    }
+    let _ = kill.status(); // fine if it was already down
+  }
+  std::thread::sleep(Duration::from_millis(800));
+  spawn_web(read_lock_port(&home).unwrap_or(DEFAULT_PORT))?;
+  wait_alive(&home, Duration::from_secs(15))
+    .ok_or_else(|| "kimi web did not become healthy within 15s".to_string())?;
+  Ok(())
+}
+
+fn kill_pid(pid: u64) {
   #[cfg(windows)]
   {
+    let mut cmd = Command::new("taskkill");
+    cmd.args(["/PID", &pid.to_string(), "/F"]);
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x08000000;
-    kill.creation_flags(CREATE_NO_WINDOW);
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    let _ = cmd.status();
   }
-  let _ = kill.status(); // fine if it was already down
-  std::thread::sleep(Duration::from_millis(800));
-  ensure_server(read_lock_port(&kimi_home()).unwrap_or(DEFAULT_PORT))?;
-  Ok(())
+  #[cfg(not(windows))]
+  {
+    let _ = Command::new("kill").arg(pid.to_string()).status();
+  }
 }
 
 /// Open a local file with the OS default handler (used by image filename
@@ -215,7 +300,7 @@ fn open_path(path: &str) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-  use super::iso_ms;
+  use super::*;
 
   #[test]
   fn parses_lock_started_at() {
@@ -224,6 +309,47 @@ mod tests {
     assert_eq!(iso_ms("2026-07-19T03:52:48.066Z"), Some(1784433168066));
     assert_eq!(iso_ms("garbage"), None);
     assert_eq!(iso_ms("2026-07"), None);
+  }
+
+  fn temp_home(tag: &str) -> PathBuf {
+    let dir = std::env::temp_dir().join(format!("kimiscope-test-{tag}-{}", std::process::id()));
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(dir.join("server").join("instances")).unwrap();
+    dir
+  }
+
+  #[test]
+  fn instances_sorted_newest_first() {
+    let home = temp_home("inst");
+    fs::write(home.join("server/instances/a.json"), r#"{"pid":1,"port":1111,"started_at":100}"#)
+      .unwrap();
+    fs::write(home.join("server/instances/b.json"), r#"{"pid":2,"port":2222,"started_at":200}"#)
+      .unwrap();
+    let inst = read_instances(&home);
+    assert_eq!(inst.len(), 2);
+    assert_eq!(inst[0].port, Some(2222));
+    assert_eq!(inst[1].port, Some(1111));
+    let _ = fs::remove_dir_all(&home);
+  }
+
+  #[test]
+  fn lock_port_parsed() {
+    let home = temp_home("lock");
+    fs::write(
+      home.join("server/lock"),
+      r#"{"port":58627,"started_at":"2026-07-19T03:52:48.066Z"}"#,
+    )
+    .unwrap();
+    assert_eq!(read_lock_port(&home), Some(58627));
+    let _ = fs::remove_dir_all(&home);
+  }
+
+  #[test]
+  fn missing_files_yield_no_instances() {
+    let home = temp_home("empty");
+    assert!(read_instances(&home).is_empty());
+    assert_eq!(read_lock_port(&home), None);
+    let _ = fs::remove_dir_all(&home);
   }
 }
 
