@@ -14,6 +14,10 @@ KimiScope is a standalone desktop app for [Kimi Code](https://www.kimi.com/code)
 - **Multi-project sidebar** with turn vs background activity indicators (⚡ mid-turn, ⟳ background tasks), rename/fork/export per session
 - Local terminal pane, session diffs, crash-proof resync
 
+## Why the daemon API instead of ACP
+
+KimiScope deliberately doesn't speak [ACP](https://agentclientprotocol.com) (the editor↔agent protocol used by Zed and friends). ACP's baseline is a single session with prompt/cancel/permission calls — there's no prompt queueing or steer, no background tasks, no goals, no multi-session presence, and no transcript browsing. Going through it would mean giving up most of the list above. Instead, KimiScope talks to the kimi daemon's native REST + WebSocket API directly: sessions persist there (you can close the window mid-turn), every session in every project is visible at once, and the full control surface — queue / steer / stop, task log tails, goals, wire-derived history — is available. The daemon API isn't a public spec yet, so this does mean tracking the CLI's changes closely; we verify against each new kimi release.
+
 ## Install
 
 **Requirements:** Windows, [Node.js](https://nodejs.org), and the [Kimi Code CLI](https://www.kimi.com/code) (`npm install -g @moonshot-ai/kimi-code`, then `kimi login` once). Verified against kimi 0.27.0 and 0.28.1 — later versions are untested until verified (the daemon API is model-agnostic; any Kimi model the CLI supports renders fine).
