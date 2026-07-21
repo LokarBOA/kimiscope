@@ -27,3 +27,6 @@ public/dev-token.json
 .playwright-mcp/
 src-tauri/target/
 .scratch-kimi28/
+
+# LokarBoA gh token drop (user-provided, never commit)
+.lokarboa-token
