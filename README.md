@@ -16,7 +16,7 @@ KimiScope is a standalone desktop app for [Kimi Code](https://www.kimi.com/code)
 
 ## Install
 
-**Requirements:** Windows, [Node.js](https://nodejs.org), and the [Kimi Code CLI](https://www.kimi.com/code) (`npm install -g @moonshot-ai/kimi-code`, then `kimi login` once). Compatible with kimi 0.27 and 0.28+.
+**Requirements:** Windows, [Node.js](https://nodejs.org), and the [Kimi Code CLI](https://www.kimi.com/code) (`npm install -g @moonshot-ai/kimi-code`, then `kimi login` once). Verified against kimi 0.27.0 and 0.28.1 — later versions are untested until verified (the daemon API is model-agnostic; any Kimi model the CLI supports renders fine).
 
 **Download the installer from [Releases](../../releases)** (MSI or NSIS `KimiScope_*_setup.exe`) and run it. KimiScope auto-starts the local kimi server (`kimi web`) and reads its token — no further wiring.
 
