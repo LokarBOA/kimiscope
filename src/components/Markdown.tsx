@@ -37,6 +37,7 @@ function getHighlighter() {
 
 function CodeBlock({ lang, code }: { lang: string; code: string }) {
   const [html, setHtml] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   useEffect(() => {
     let alive = true
     const l = LANGS.includes(lang) ? lang : 'text'
@@ -51,18 +52,38 @@ function CodeBlock({ lang, code }: { lang: string; code: string }) {
     }
   }, [lang, code])
 
+  const copyBtn = (
+    <button
+      onClick={async () => {
+        await navigator.clipboard.writeText(code)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      }}
+      title="Copy code"
+      className="absolute top-1.5 right-1.5 rounded bg-zinc-800/90 px-1.5 py-0.5 text-[11px] text-zinc-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-700 hover:text-zinc-200"
+    >
+      {copied ? '✓' : '📋'}
+    </button>
+  )
+
   if (html) {
     return (
-      <div
-        className="codeblock overflow-x-auto rounded-md text-[13px] leading-relaxed [&>pre]:p-3"
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
+      <div className="group relative">
+        <div
+          className="codeblock overflow-x-auto rounded-md text-[13px] leading-relaxed [&>pre]:p-3"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+        {copyBtn}
+      </div>
     )
   }
   return (
-    <pre className="overflow-x-auto rounded-md bg-zinc-900 p-3 text-[13px] text-zinc-200">
-      <code>{code}</code>
-    </pre>
+    <div className="group relative">
+      <pre className="overflow-x-auto rounded-md bg-zinc-900 p-3 text-[13px] text-zinc-200">
+        <code>{code}</code>
+      </pre>
+      {copyBtn}
+    </div>
   )
 }
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Copy button on code blocks** — hovering a fenced code block shows 📋 in its top-right corner; copies the raw code, with a ✓ flash. (Both the shiki-highlighted and plain-fallback render paths.)
+
 ## v0.1.6
 
 ### Added
