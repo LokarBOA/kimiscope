@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **New sessions verify their profile actually stuck** — a dropped profile write (seen on daemon warm-up edges) used to surface only as `model.not_configured` on the first prompt. The app now re-reads `/status` after profiling, retries once, and tells you to pick a model in the rail if it still didn't take.
+
 ## v0.1.7
 
 ### Added

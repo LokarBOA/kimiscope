@@ -775,12 +775,26 @@ export async function newSession(cwd: string): Promise<string | null> {
       metadata: { cwd },
     })
     const id = created.id
-    await post(`/sessions/${id}/profile`, {
-      agent_config: {
-        model,
-        permission_mode: localStorage.getItem('kimiscope.permissionMode') ?? 'yolo',
-      },
-    }).catch((e) => console.error('profile failed', e))
+    const profile = () =>
+      post(`/sessions/${id}/profile`, {
+        agent_config: {
+          model,
+          permission_mode: localStorage.getItem('kimiscope.permissionMode') ?? 'yolo',
+        },
+      })
+    await profile().catch((e) => console.error('profile failed', e))
+    // The profile write can silently not stick (seen on daemon warm-up edges):
+    // verify via /status (the only reliable read-back) and retry once before
+    // letting the user hit `model.not_configured` on their first prompt.
+    let status = await get<{ model?: string }>(`/sessions/${id}/status`).catch(() => null)
+    if (!status?.model) {
+      console.warn('profile did not stick; retrying', id)
+      await profile().catch(() => {})
+      status = await get<{ model?: string }>(`/sessions/${id}/status`).catch(() => null)
+      if (!status?.model) {
+        useApp.getState().setNotice('new session has no model — pick one in the rail Session section')
+      }
+    }
     await refreshSessions()
     st.setActiveSession(id)
     void watchSession(id)
