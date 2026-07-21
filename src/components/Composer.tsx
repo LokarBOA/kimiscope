@@ -1,25 +1,25 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { abortActive, runSlashCommand, sendPrompt } from '../state/sync'
-import { useApp } from '../state/store'
+import { useApp, type ComposerDraft, type DraftImage } from '../state/store'
 import { filterCommands, slashNameFilter, THINKING_LEVELS } from '../state/commands'
 import type { SkillInfo } from '../api/events'
 import { CommandMenu, type MenuEntry, type MenuSection } from './CommandMenu'
 
-interface PendingImage {
-  mediaType: string
-  base64: string
-  previewUrl: string
-}
-
 const NO_SKILLS: SkillInfo[] = []
+const NO_IMAGES: DraftImage[] = []
 
 interface FlatEntry extends MenuEntry {
   action: () => void
 }
 
 export function Composer({ sessionId }: { sessionId: string }) {
-  const [text, setText] = useState('')
-  const [images, setImages] = useState<PendingImage[]>([])
+  // The composer stays mounted across session switches, so the draft lives in
+  // the store keyed by session id — typed text must neither follow the switch
+  // nor be lost.
+  const draft = useApp((st) => st.drafts[sessionId])
+  const text = draft?.text ?? ''
+  const images = draft?.images ?? NO_IMAGES
+  const setDraft = useApp((st) => st.setDraft)
   const [sending, setSending] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const [highlight, setHighlight] = useState(0)
@@ -31,18 +31,34 @@ export function Composer({ sessionId }: { sessionId: string }) {
   const setNotice = useApp((st) => st.setNotice)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
+  const updateDraft = useCallback(
+    (patch: Partial<ComposerDraft>) => {
+      const cur = useApp.getState().drafts[sessionId] ?? { text: '', images: [] }
+      setDraft(sessionId, { ...cur, ...patch })
+    },
+    [sessionId, setDraft],
+  )
+
+  // A restored draft may need a taller box than the single-row default.
+  useEffect(() => {
+    const el = taRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 200) + 'px'
+  }, [sessionId])
+
   // QueueBar "edit" moves a queued prompt's text back here.
   useEffect(() => {
     function onEdit(e: Event) {
       const d = (e as CustomEvent<{ sessionId: string; text: string }>).detail
       if (d?.sessionId === sessionId) {
-        setText(d.text)
+        updateDraft({ text: d.text })
         taRef.current?.focus()
       }
     }
     window.addEventListener('kimiscope:edit-queued', onEdit)
     return () => window.removeEventListener('kimiscope:edit-queued', onEdit)
-  }, [sessionId])
+  }, [sessionId, updateDraft])
 
   // Transient feedback for executed `/commands`.
   useEffect(() => {
@@ -57,10 +73,11 @@ export function Composer({ sessionId }: { sessionId: string }) {
     reader.onload = () => {
       const dataUrl = String(reader.result)
       const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1)
-      setImages((imgs) => [
-        ...imgs,
-        { mediaType: file.type, base64, previewUrl: dataUrl },
-      ])
+      const cur = useApp.getState().drafts[sessionId] ?? { text: '', images: [] }
+      setDraft(sessionId, {
+        ...cur,
+        images: [...cur.images, { mediaType: file.type, base64, previewUrl: dataUrl }],
+      })
     }
     reader.readAsDataURL(file)
   }
@@ -69,7 +86,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
   async function execSlash(raw: string): Promise<boolean> {
     const r = await runSlashCommand(sessionId, raw)
     if (!r.handled) return false
-    setText('')
+    updateDraft({ text: '' })
     setModelPicker(null)
     if (taRef.current) taRef.current.style.height = 'auto'
     if (r.notice) setNotice(r.notice)
@@ -79,13 +96,13 @@ export function Composer({ sessionId }: { sessionId: string }) {
   function pickCommand(name: string) {
     if (name === 'model' || name === 'thinking') {
       setModelPicker(name)
-      setText(`/${name}`)
+      updateDraft({ text: `/${name}` })
       setHighlight(0)
       return
     }
     // Commands needing arguments complete the name and let the user type them.
     if (name === 'title' || name === 'goal') {
-      setText(`/${name} `)
+      updateDraft({ text: `/${name} ` })
       taRef.current?.focus()
       return
     }
@@ -93,7 +110,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
   }
 
   function pickSkill(name: string) {
-    setText(`/${name} `)
+    updateDraft({ text: `/${name} ` })
     taRef.current?.focus()
   }
 
@@ -156,8 +173,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
       // unknown ones fall through as normal messages (CLI semantics).
       if (t.startsWith('/') && (await execSlash(t))) return
       await sendPrompt(sessionId, t, mode, images)
-      setText('')
-      setImages([])
+      updateDraft({ text: '', images: [] })
       if (taRef.current) taRef.current.style.height = 'auto'
     } catch (e) {
       console.error('prompt failed', e)
@@ -187,7 +203,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
                 className="h-16 rounded-md border border-zinc-700 object-cover"
               />
               <button
-                onClick={() => setImages((imgs) => imgs.filter((_, j) => j !== i))}
+                onClick={() => updateDraft({ images: images.filter((_, j) => j !== i) })}
                 className="absolute -top-1.5 -right-1.5 hidden h-4 w-4 items-center justify-center rounded-full bg-zinc-700 text-[10px] text-zinc-200 group-hover:flex"
               >
                 ✕
@@ -205,7 +221,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
             busy ? 'Message — Enter queues, ⚡ Now interrupts…' : 'Message Kimi… (paste images, / for commands)'
           }
           onChange={(e) => {
-            setText(e.target.value)
+            updateDraft({ text: e.target.value })
             setDismissed(false)
             setHighlight(0)
             if (modelPicker && e.target.value !== `/${modelPicker}`) setModelPicker(null)

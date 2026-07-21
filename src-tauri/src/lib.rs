@@ -190,6 +190,29 @@ fn restart_daemon() -> Result<(), String> {
   Ok(())
 }
 
+/// Open a local file with the OS default handler (used by image filename
+/// links). The path goes as an argv element — never through a shell — so
+/// metacharacters in it can't be interpreted.
+#[tauri::command]
+fn open_path(path: &str) -> Result<(), String> {
+  #[cfg(windows)]
+  let mut cmd = Command::new("explorer");
+  #[cfg(target_os = "macos")]
+  let mut cmd = Command::new("open");
+  #[cfg(all(unix, not(target_os = "macos")))]
+  let mut cmd = Command::new("xdg-open");
+  cmd.arg(path);
+  #[cfg(windows)]
+  {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
+    cmd.creation_flags(CREATE_NO_WINDOW);
+  }
+  // explorer.exe reports odd exit codes even on success; spawning is enough.
+  cmd.spawn().map_err(|e| format!("failed to open {path}: {e}"))?;
+  Ok(())
+}
+
 #[cfg(test)]
 mod tests {
   use super::iso_ms;
@@ -223,6 +246,7 @@ pub fn run() {
       get_mcp_meta,
       set_mcp_enabled,
       restart_daemon,
+      open_path,
       term::term_spawn,
       term::term_write,
       term::term_resize,

@@ -151,6 +151,19 @@ export interface ModelInfo {
   capabilities: string[]
 }
 
+export interface DraftImage {
+  mediaType: string
+  base64: string
+  previewUrl: string
+}
+
+/** Unsent composer content, kept per session so switching sessions neither
+ *  carries the draft along nor loses it. */
+export interface ComposerDraft {
+  text: string
+  images: DraftImage[]
+}
+
 interface AppState {
   conn: ConnectionInfo | null
   socketState: 'connecting' | 'open' | 'closed'
@@ -166,6 +179,7 @@ interface AppState {
   initError: string | null
   /** Transient composer feedback for `/commands` (survives session switches). */
   notice: string | null
+  drafts: Record<string, ComposerDraft>
   /** Sidebar: include archived sessions in the list (view-only; the daemon
    *  has no unarchive action in 0.27.0). */
   showArchived: boolean
@@ -186,6 +200,7 @@ interface AppState {
   setModels: (m: ModelInfo[], defaultModel: string | null) => void
   setInitError: (e: string | null) => void
   setNotice: (n: string | null) => void
+  setDraft: (id: string, draft: ComposerDraft) => void
   setShowArchived: (b: boolean) => void
   setApprovals: (id: string, approvals: ApprovalItem[]) => void
   setQuestions: (id: string, questions: QuestionItem[]) => void
@@ -224,6 +239,7 @@ export const useApp = create<AppState>((set) => ({
   defaultModel: null,
   initError: null,
   notice: null,
+  drafts: {},
   showArchived: false,
 
   setConnection: (conn) => set({ conn }),
@@ -361,6 +377,15 @@ export const useApp = create<AppState>((set) => ({
   setInitError: (initError) => set({ initError }),
 
   setNotice: (notice) => set({ notice }),
+
+  setDraft: (id, draft) =>
+    set((st) => {
+      // Empty drafts are dropped so the map doesn't fill with blank entries.
+      const drafts = { ...st.drafts }
+      if (!draft.text && draft.images.length === 0) delete drafts[id]
+      else drafts[id] = draft
+      return { drafts }
+    }),
 
   setShowArchived: (showArchived) => set({ showArchived }),
 
@@ -746,7 +771,12 @@ export const useApp = create<AppState>((set) => ({
             break
           }
           const existing = new Set(next.messages.map((m) => m.id))
-          const fresh = msgs.filter((m) => !existing.has(m.id))
+          // Mid-turn splices carrying runtime envelopes (system reminders)
+          // arrive WITHOUT ids — mint frame-stable ones first, or they dedupe
+          // never and render with key={undefined}.
+          const fresh = msgs
+            .map((m, i) => (m.id == null ? { ...m, id: `spliced_${f.seq}_${i}` } : m))
+            .filter((m) => !existing.has(m.id))
           if (fresh.length) {
             const merged = [...next.messages]
             merged.splice(Math.min(start, merged.length), 0, ...fresh)
@@ -825,3 +855,8 @@ export const useApp = create<AppState>((set) => ({
       return { sessionState: { ...st.sessionState, [id]: next } }
     }),
 }))
+
+// Dev-console access for debugging state shape issues (no prod exposure).
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  ;(window as unknown as { __appStore: typeof useApp }).__appStore = useApp
+}

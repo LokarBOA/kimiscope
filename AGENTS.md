@@ -29,6 +29,7 @@ To set up KimiScope on a new Windows machine, an agent can do everything with th
 
 - WS flow: connect (subprotocol auth) → `client_hello` → REST `GET /sessions/{id}/snapshot` → `subscribe` with cursor `{seq: snapshot.as_of_seq, epoch: snapshot.epoch}` → `session_event` frames. Reply to `ping` with `pong`. On reconnect/`resync_required`/context rewrite: re-snapshot.
 - **The WS stream never carries completed assistant messages** — only the user-message `context.spliced` and live deltas. Pull `GET /sessions/{id}/messages` at `turn.ended`/`prompt.completed` (debounced). `/messages` is newest-first (reverse it); snapshot is chronological.
+- Mid-turn `context.spliced` inserts can carry runtime envelopes (system reminders injected as user-role text) **without a message `id`** — mint a local one before merging (the store uses `spliced_<seq>_<i>`), or they dedupe never and render keyless. The next `/messages` pull replaces them with the daemon's projection.
 - Sessions created **through the daemon API** are streamable. Sessions created by the TUI/CLI before the daemon saw them answer `not_found` on subscribe — snapshot data still renders.
 - Session creation ignores `agent_config`; always `POST /sessions/{id}/profile` with `{agent_config: {model, permission_mode}}` afterwards.
 - Subagent frames share the session stream with `agentId != 'main'`; lifecycle: `subagent.spawned/started/completed`. Never merge them into main streaming/history.

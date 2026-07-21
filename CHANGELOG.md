@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.1.3
+
+### Added
+
+- **Per-session composer drafts** — unsent text and pasted images live in the store keyed by session id: switching sessions no longer carries the draft along, and switching back restores it.
+- **Filename links on image tool results** — inline result images (ReadMediaFile et al.) now show the source file's basename above the thumbnail; clicking opens the file with the OS default handler via a new `open_path` Tauri command (path passed as argv, never through a shell). Browser-dev falls back to opening the image in a new tab.
+
+### Fixed
+
+- **React "unique key" warnings from mid-turn spliced messages** — `context.spliced` frames that inject runtime envelopes (system reminders as user-role text) arrive **without a message id**; they entered `messages` as-is and rendered keyless on every render until the turn-end history pull healed state (and could never dedupe on redelivery). The reducer now mints a frame-stable `spliced_<seq>_<i>` id before merging.
+
 ## v0.1.2
 
 ### Added

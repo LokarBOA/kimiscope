@@ -189,6 +189,18 @@ describe('context.spliced merging', () => {
     st.applyFrame(frame('context.spliced', { agentId: 'main', start: 0, deleteCount: 2, messages: [] }))
     expect(useApp.getState().sessionState[SID].synced).toBe(false)
   })
+
+  it('mints ids for spliced messages that arrive without one (runtime envelopes)', () => {
+    const st = useApp.getState()
+    const reminder = { role: 'user', content: [{ type: 'text', text: '<system-reminder>…' }] }
+    st.applyFrame(frame('context.spliced', { agentId: 'main', start: 0, deleteCount: 0, messages: [reminder] }))
+    const msgs = useApp.getState().sessionState[SID].messages
+    expect(msgs).toHaveLength(1)
+    expect(msgs[0].id).toBeTruthy()
+    // Same frame re-delivered (reconnect): the minted id must dedupe it.
+    st.applyFrame(frame('context.spliced', { agentId: 'main', start: 0, deleteCount: 0, messages: [reminder] }))
+    expect(useApp.getState().sessionState[SID].messages).toHaveLength(1)
+  })
 })
 
 describe('snapshot guards', () => {

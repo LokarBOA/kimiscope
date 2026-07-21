@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import DiffViewer from 'react-diff-viewer-continued'
 import type { SubagentRecord, ToolCallRecord } from '../api/events'
+import { openExternal } from '../api/openPath'
 
 function fmtArgs(args: unknown): string {
   if (args == null) return ''
@@ -154,6 +155,14 @@ export function ToolCard({
   const cmd = call.display?.command ?? (isBash ? (call.args as { command?: string })?.command : undefined)
   const output = fmtOutput(call.output) || call.progressText || ''
   const resultImages = extractResultImages(call.output)
+  // Source file behind a result image (ReadMediaFile et al. take a `path` arg).
+  // args can still be a concatenated string while deltas stream in — guard.
+  const imagePath =
+    resultImages.length > 0 && typeof call.args === 'object' && call.args !== null
+      ? ((call.args as { path?: unknown }).path as string | undefined)
+      : undefined
+  const imageName =
+    typeof imagePath === 'string' && imagePath ? (imagePath.split(/[\\/]/).pop() ?? null) : null
 
   const dot =
     call.status === 'running'
@@ -246,17 +255,27 @@ export function ToolCard({
       {resultImages.length > 0 && (
         <div className="flex flex-wrap gap-2 border-t border-zinc-800/60 px-3 py-2">
           {resultImages.map((url, i) => (
-            <img
-              key={i}
-              src={url}
-              alt="tool result"
-              loading="lazy"
-              onClick={() => setFullImage((v) => (v === i ? null : i))}
-              title={fullImage === i ? 'Click to shrink' : 'Click to expand'}
-              className={`cursor-zoom-in rounded-md border border-zinc-700 object-contain ${
-                fullImage === i ? 'w-full' : 'max-h-64'
-              }`}
-            />
+            <div key={i} className="flex flex-col gap-1">
+              {imageName && (
+                <button
+                  onClick={() => void openExternal(imagePath as string, url)}
+                  title={`${imagePath} — open externally`}
+                  className="max-w-56 truncate text-left font-mono text-[11px] text-sky-400/90 underline decoration-zinc-600 underline-offset-2 hover:text-sky-300"
+                >
+                  {imageName}
+                </button>
+              )}
+              <img
+                src={url}
+                alt={imageName ?? 'tool result'}
+                loading="lazy"
+                onClick={() => setFullImage((v) => (v === i ? null : i))}
+                title={fullImage === i ? 'Click to shrink' : 'Click to expand'}
+                className={`cursor-zoom-in rounded-md border border-zinc-700 object-contain ${
+                  fullImage === i ? 'w-full' : 'max-h-64'
+                }`}
+              />
+            </div>
           ))}
         </div>
       )}
