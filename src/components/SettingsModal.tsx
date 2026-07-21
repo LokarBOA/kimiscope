@@ -21,8 +21,8 @@ const LABELS: Record<string, { label: string; hint: string; power?: boolean }> =
 }
 
 const PERMISSION_MODES = [
-  { id: 'yolo', label: 'yolo — approve everything automatically' },
-  { id: 'auto', label: 'auto — agent decides, no questions' },
+  { id: 'yolo', label: 'yolo — auto-approve tool calls (may still ask questions)' },
+  { id: 'auto', label: 'auto — fully autonomous, never asks' },
   { id: 'manual', label: 'manual — approve each tool call' },
 ]
 

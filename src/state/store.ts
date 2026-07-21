@@ -818,6 +818,9 @@ export const useApp = create<AppState>((set) => ({
           if (p.reason === 'failed' && p.error) {
             next.lastError = `${(p.error as { code?: string }).code}: ${(p.error as { message?: string }).message}`
           }
+          // Any outbox chip still standing at turn end is settled: its message
+          // either landed (history pull shows it) or never will.
+          next.outbox = []
           Object.assign(next, sweepInterrupted(next))
           break
         }
@@ -825,6 +828,7 @@ export const useApp = create<AppState>((set) => ({
           if (!isMain) break
           next.busy = false
           next.streaming = { ...next.streaming, active: false }
+          next.outbox = []
           Object.assign(next, sweepInterrupted(next))
           break
         }

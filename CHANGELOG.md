@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Composer: ■ Stop replaces ⚡ Now** — the busy-state buttons are Queue / Steer / ■ Stop; Stop (or Esc) aborts the active turn and the draft stays put for Send. Stop is always enabled while a turn runs.
+- **kimi 0.28 support (`kimi web` migration)** — 0.28 replaces the `kimi server` daemon tree with foreground `kimi web` instances (`server/lock` → `server/instances/*.json`, one shared `server.token`). The app now discovers a live server by probing instance files (then the 0.27 lock, then the default port), spawns `kimi web --no-open` when none answers, and restarts by killing the instance pid (`kimi server kill` fallback pre-0.28). Works against both 0.27.0 and 0.28.1; REST/WS protocols are unchanged.
+- **Copy alignment with 0.28.1**: yolo/auto descriptions corrected (yolo auto-approves tool calls but may still ask; auto is fully autonomous); model/thinking pickers warn that switching invalidates the prompt cache.
+
+### Fixed
+
+- **"sending…" chips no longer stick around** — outbox chips used to clear only when a `context.spliced` frame text-matched them, which never comes for queue promotions or aborted prompts (queue → edit was the classic stuck case). Queue/send chips now retire as soon as the daemon accepts the prompt (the real queue row takes over), leftover steer/interrupt chips are swept at turn end, and queue rows refresh immediately after edit/cancel.
+
 ## v0.1.3
 
 ### Added

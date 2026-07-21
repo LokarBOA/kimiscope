@@ -1,5 +1,5 @@
 import { post } from '../api/client'
-import { abortPrompt } from '../state/sync'
+import { abortQueuedAndRefresh } from '../state/sync'
 import { useApp } from '../state/store'
 
 const NO_OUTBOX: import('../state/store').OutboxItem[] = []
@@ -51,7 +51,7 @@ export function PendingStrip({ sessionId }: { sessionId: string }) {
                 window.dispatchEvent(
                   new CustomEvent('kimiscope:edit-queued', { detail: { sessionId, text } }),
                 )
-                void abortPrompt(sessionId, q.prompt_id)
+                void abortQueuedAndRefresh(sessionId, q.prompt_id)
               }}
               className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-800 hover:text-sky-400"
             >
@@ -68,7 +68,7 @@ export function PendingStrip({ sessionId }: { sessionId: string }) {
             </button>
             <button
               title="Remove from queue"
-              onClick={() => void abortPrompt(sessionId, q.prompt_id)}
+              onClick={() => void abortQueuedAndRefresh(sessionId, q.prompt_id)}
               className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-800 hover:text-red-400"
             >
               ✕

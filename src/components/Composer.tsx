@@ -130,7 +130,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
           action: () => void execSlash(`/model ${m.model}`),
         })
       }
-      sections.push({ title: 'Models', entries: flat, start: 0 })
+      sections.push({ title: 'Models — switching invalidates the prompt cache', entries: flat, start: 0 })
     } else if (modelPicker === 'thinking') {
       for (const level of THINKING_LEVELS) {
         flat.push({
@@ -139,7 +139,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
           action: () => void execSlash(`/thinking ${level}`),
         })
       }
-      sections.push({ title: 'Thinking effort', entries: flat, start: 0 })
+      sections.push({ title: 'Thinking effort — switching invalidates the prompt cache', entries: flat, start: 0 })
     } else {
       const g = filterCommands(nameFilter ?? '', skills ?? NO_SKILLS)
       const cmdEntries: FlatEntry[] = g.commands.map((c) => ({

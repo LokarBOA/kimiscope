@@ -10,8 +10,8 @@ export interface SlashCommand {
 }
 
 export const COMMANDS: SlashCommand[] = [
-  { name: 'yolo', description: 'Skip approvals for regular tool calls' },
-  { name: 'auto', description: 'Approvals handled automatically; no questions' },
+  { name: 'yolo', description: 'Auto-approve tool calls; may still ask questions' },
+  { name: 'auto', description: 'Fully autonomous; never asks questions' },
   { name: 'manual', description: 'Ask before every tool call' },
   { name: 'plan', description: 'Toggle plan mode', args: '[on|off]' },
   { name: 'model', description: 'Switch model', args: '[alias]' },

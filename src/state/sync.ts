@@ -647,6 +647,13 @@ export async function sendPrompt(
       void getPromptQueue(sessionId)
         .then((q) => useApp.getState().setQueue(sessionId, q))
         .catch(() => {})
+      // Queue/send: the daemon queue row (or the incoming splice) now represents
+      // the message truthfully — retire the chip. Steer/interrupt chips stay:
+      // they cover the gap until the message materializes at a step boundary
+      // (cleared by the splice match or at turn end).
+      if (kind !== 'steer' && kind !== 'interrupt') {
+        useApp.getState().clearOutbox(sessionId, localId)
+      }
     }
   } catch (e) {
     useApp.getState().clearOutbox(sessionId, localId)
@@ -660,6 +667,13 @@ export async function getPromptQueue(sessionId: string): Promise<PromptQueue> {
 
 export async function abortPrompt(sessionId: string, promptId: string): Promise<void> {
   await post(`/sessions/${sessionId}/prompts/${promptId}:abort`, {})
+}
+
+/** Abort a queued prompt and refresh the queue so the row disappears at once. */
+export async function abortQueuedAndRefresh(sessionId: string, promptId: string): Promise<void> {
+  await abortPrompt(sessionId, promptId)
+  const q = await getPromptQueue(sessionId)
+  useApp.getState().setQueue(sessionId, q)
 }
 
 /** Abort the active turn (REST works for any active prompt; WS is the fallback). */
