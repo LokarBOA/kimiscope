@@ -4,7 +4,7 @@ const TOKEN = readFileSync(process.env.USERPROFILE + '/.kimi-code/server.token',
 const BASE = 'http://127.0.0.1:58627'
 const H = { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json' }
 const dump = []
-const created = await fetch(`${BASE}/api/v1/sessions`, { method: 'POST', headers: H, body: JSON.stringify({ title: 'Harness screen probe', metadata: { cwd: 'C:/Users/user/Projects/KimiHarness' } }) }).then((r) => r.json())
+const created = await fetch(`${BASE}/api/v1/sessions`, { method: 'POST', headers: H, body: JSON.stringify({ title: 'Harness screen probe', metadata: { cwd: process.cwd() } }) }).then((r) => r.json())
 const SID = (created.data ?? created).id
 console.log('session:', SID)
 await fetch(`${BASE}/api/v1/sessions/${SID}/profile`, { method: 'POST', headers: H, body: JSON.stringify({ agent_config: { model: 'kimi-code/k3', permission_mode: 'yolo' } }) })

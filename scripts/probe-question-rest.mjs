@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 const TOKEN = readFileSync(process.env.USERPROFILE + '/.kimi-code/server.token', 'utf8').trim()
 const BASE = 'http://127.0.0.1:58627'
 const H = { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json' }
-const created = await fetch(`${BASE}/api/v1/sessions`, { method: 'POST', headers: H, body: JSON.stringify({ title: 'q rest probe', metadata: { cwd: 'C:/Users/user/Projects/KimiHarness' } }) }).then((r) => r.json())
+const created = await fetch(`${BASE}/api/v1/sessions`, { method: 'POST', headers: H, body: JSON.stringify({ title: 'q rest probe', metadata: { cwd: process.cwd() } }) }).then((r) => r.json())
 const SID = created.data.id
 await fetch(`${BASE}/api/v1/sessions/${SID}/profile`, { method: 'POST', headers: H, body: JSON.stringify({ agent_config: { model: 'kimi-code/k3', permission_mode: 'yolo' } }) })
 await fetch(`${BASE}/api/v1/sessions/${SID}/prompts`, { method: 'POST', headers: H, body: JSON.stringify({ content: [{ type: 'text', text: 'Use the AskUserQuestion tool to ask me exactly two questions at once (favorite color; favorite animal). Wait for the answer.' }] }) })

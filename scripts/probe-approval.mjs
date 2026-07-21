@@ -9,7 +9,7 @@ const J = (r) => r.json()
 
 const created = await fetch(`${BASE}/api/v1/sessions`, {
   method: 'POST', headers: H,
-  body: JSON.stringify({ title: 'approval shape probe', metadata: { cwd: 'C:\\Users\\user\\Projects\\KimiHarness' } }),
+  body: JSON.stringify({ title: 'approval shape probe', metadata: { cwd: process.cwd() } }),
 }).then(J)
 const SID = (created.data ?? created).id
 console.log('session:', SID)

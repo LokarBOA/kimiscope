@@ -16,7 +16,7 @@ const created = await fetch(`${BASE}/api/v1/sessions`, {
   method: 'POST', headers: H,
   body: JSON.stringify({
     title: 'Harness WS probe',
-    metadata: { cwd: 'C:\\Users\\user\\Projects\\KimiHarness' },
+    metadata: { cwd: process.cwd() },
     agent_config: { permission_mode: 'yolo', model: 'kimi-code/k3' },
   }),
 }).then((r) => r.json())

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 const TOKEN = readFileSync(process.env.USERPROFILE + '/.kimi-code/server.token', 'utf8').trim()
 const BASE = 'http://127.0.0.1:58627'
 const H = { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json' }
-const created = await fetch(`${BASE}/api/v1/sessions`, { method: 'POST', headers: H, body: JSON.stringify({ title: 'steer2 probe', metadata: { cwd: 'C:/Users/user/Projects/KimiHarness' } }) }).then((r) => r.json())
+const created = await fetch(`${BASE}/api/v1/sessions`, { method: 'POST', headers: H, body: JSON.stringify({ title: 'steer2 probe', metadata: { cwd: process.cwd() } }) }).then((r) => r.json())
 const SID = created.data.id
 await fetch(`${BASE}/api/v1/sessions/${SID}/profile`, { method: 'POST', headers: H, body: JSON.stringify({ agent_config: { model: 'kimi-code/k3', permission_mode: 'yolo' } }) })
 const snap = await fetch(`${BASE}/api/v1/sessions/${SID}/snapshot`, { headers: H }).then((r) => r.json()).then((j) => j.data ?? j)

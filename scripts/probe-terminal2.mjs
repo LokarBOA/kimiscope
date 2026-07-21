@@ -5,7 +5,7 @@ const BASE = 'http://127.0.0.1:58627'
 const H = { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json' }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
-const created = await fetch(`${BASE}/api/v1/sessions`, { method: 'POST', headers: H, body: JSON.stringify({ title: 'term probe init', metadata: { cwd: 'C:/Users/user/Projects/KimiHarness' } }) }).then((r) => r.json())
+const created = await fetch(`${BASE}/api/v1/sessions`, { method: 'POST', headers: H, body: JSON.stringify({ title: 'term probe init', metadata: { cwd: process.cwd() } }) }).then((r) => r.json())
 const SID = created.data.id
 await fetch(`${BASE}/api/v1/sessions/${SID}/profile`, { method: 'POST', headers: H, body: JSON.stringify({ agent_config: { model: 'kimi-code/k3', permission_mode: 'yolo' } }) })
 console.log('session:', SID)

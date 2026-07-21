@@ -11,7 +11,7 @@ const log = (...a) => console.log(...a)
 
 const created = await fetch(`${BASE}/api/v1/sessions`, {
   method: 'POST', headers: H,
-  body: JSON.stringify({ title: 'Harness subagent probe', metadata: { cwd: 'C:\\Users\\user\\Projects\\KimiHarness' } }),
+  body: JSON.stringify({ title: 'Harness subagent probe', metadata: { cwd: process.cwd() } }),
 }).then((r) => r.json())
 const SID = (created.data ?? created).id
 log('session:', SID)
