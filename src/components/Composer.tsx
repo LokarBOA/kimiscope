@@ -218,7 +218,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
           value={text}
           rows={1}
           placeholder={
-            busy ? 'Message — Enter queues, ⚡ Now interrupts…' : 'Message Kimi… (paste images, / for commands)'
+            busy ? 'Message — Enter queues, Steer injects, ■ Stop aborts…' : 'Message Kimi… (paste images, / for commands)'
           }
           onChange={(e) => {
             updateDraft({ text: e.target.value })
@@ -283,12 +283,11 @@ export function Composer({ sessionId }: { sessionId: string }) {
               Steer
             </button>
             <button
-              onClick={() => void submit('interrupt')}
-              disabled={(!text.trim() && images.length === 0) || sending}
-              title="Interrupt NOW: kills the active turn; this message takes over"
-              className="rounded-md bg-amber-600/80 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-amber-500 disabled:bg-zinc-800 disabled:text-zinc-600"
+              onClick={() => void abortActive(sessionId)}
+              title="Stop the active turn (Esc also works); your message stays for Send"
+              className="rounded-md bg-red-700/80 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-600"
             >
-              ⚡ Now
+              ■ Stop
             </button>
           </>
         ) : (
@@ -306,8 +305,8 @@ export function Composer({ sessionId }: { sessionId: string }) {
           <span className="text-amber-400/90">{notice}</span>
         ) : (
           <>
-            Enter sends (queues if busy) · ⚡ Now interrupts instantly · Steer lands at next step ·
-            Esc aborts · / for commands
+            Enter sends (queues if busy) · Steer lands at next step · ■ Stop or Esc aborts · / for
+            commands
           </>
         )}
       </div>
