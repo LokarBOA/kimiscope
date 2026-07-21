@@ -16,7 +16,9 @@ KimiScope is a standalone desktop app for [Kimi Code](https://www.kimi.com/code)
 
 ## Why the daemon API instead of ACP
 
-KimiScope deliberately doesn't speak [ACP](https://agentclientprotocol.com) (the editor↔agent protocol used by Zed and friends). ACP's baseline is a single session with prompt/cancel/permission calls — there's no prompt queueing or steer, no background tasks, no goals, no multi-session presence, and no transcript browsing. Going through it would mean giving up most of the list above. Instead, KimiScope talks to the kimi daemon's native REST + WebSocket API directly: sessions persist there (you can close the window mid-turn), every session in every project is visible at once, and the full control surface — queue / steer / stop, task log tails, goals, wire-derived history — is available. The daemon API isn't a public spec yet, so this does mean tracking the CLI's changes closely; we verify against each new kimi release.
+KimiScope deliberately doesn't speak [ACP](https://agentclientprotocol.com) (the editor↔agent protocol used by Zed and friends). The original motivation was stability: ACP couples the client to a spawned stdio process, so a flaky connection or client restart kills the session — and the agent can't replay history to a reconnected client. KimiScope instead talks to the kimi daemon's native REST + WebSocket API, which is built for drop-and-resume: sessions live in the daemon, connections re-subscribe from a cursor, and the window is disposable — close it mid-turn and everything keeps running.
+
+The same choice unlocks the feature surface ACP's baseline (prompt / cancel / permissions, one session at a time) doesn't have: prompt queueing with queue / steer / stop, background tasks with log tails, goals, multi-project presence, and wire-derived history. The daemon API isn't a public spec yet, so this does mean tracking the CLI's changes closely; we verify against each new kimi release.
 
 ## Install
 
