@@ -116,6 +116,8 @@ export function ChatView({ sessionId }: { sessionId: string }) {
   const liveCalls = Object.values(s.toolCalls).filter(
     (c) => c.status === 'running' && (c.agentId ?? 'main') === 'main',
   )
+  const runningTasks = s.tasks.filter((t) => t.status === 'running').length
+  const backgroundBusy = !s.streaming.active && s.busy && !s.mainTurnActive && runningTasks > 0
 
   return (
     <div
@@ -163,6 +165,13 @@ export function ChatView({ sessionId }: { sessionId: string }) {
                 Working…
               </div>
             )}
+          </div>
+        )}
+
+        {backgroundBusy && (
+          <div className="flex items-center gap-2 text-xs text-zinc-500">
+            <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-amber-400/70" />
+            {runningTasks} background task{runningTasks > 1 ? 's' : ''} running — agent idle
           </div>
         )}
 

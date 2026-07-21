@@ -60,6 +60,9 @@ export interface SessionState {
   streaming: StreamingState
   usage: SessionUsage | null
   busy: boolean
+  /** Agent mid-turn (daemon `main_turn_active`) — unlike `busy`, excludes
+   *  background tasks. Drives the workspace presence indicator. */
+  mainTurnActive: boolean
   pendingInteraction: string
   cursor: { seq: number; epoch: string } | null
   synced: boolean
@@ -73,6 +76,9 @@ export interface SessionState {
   queue: PromptQueue | null
   outbox: OutboxItem[]
   hasMore: boolean
+  /** Where history comes from: 'daemon' (/messages projection) or 'transcript'
+   *  (0.28+ wire-derived pages, used for cold CLI-era sessions). */
+  historySource: 'daemon' | 'transcript'
   skills: SkillInfo[]
   /** Timestamp of the latest background-task completion (drives the sidebar badge). */
   recentTaskDone: number | null
@@ -92,6 +98,7 @@ const emptySession = (): SessionState => ({
   streaming: emptyStreaming(),
   usage: null,
   busy: false,
+  mainTurnActive: false,
   pendingInteraction: 'none',
   cursor: null,
   synced: false,
@@ -105,6 +112,7 @@ const emptySession = (): SessionState => ({
   queue: null,
   outbox: [],
   hasMore: false,
+  historySource: 'daemon',
   skills: [],
   recentTaskDone: null,
 })
@@ -223,6 +231,7 @@ interface AppState {
   addToOutbox: (id: string, item: OutboxItem) => void
   clearOutbox: (id: string, localId?: string) => void
   setSkills: (id: string, skills: SkillInfo[]) => void
+  setHistorySource: (id: string, source: 'daemon' | 'transcript') => void
   markTaskDone: (id: string) => void
 }
 
@@ -522,6 +531,14 @@ export const useApp = create<AppState>((set) => ({
       },
     })),
 
+  setHistorySource: (id, historySource) =>
+    set((st) => ({
+      sessionState: {
+        ...st.sessionState,
+        [id]: { ...(st.sessionState[id] ?? emptySession()), historySource },
+      },
+    })),
+
   markTaskDone: (id) =>
     set((st) => ({
       sessionState: {
@@ -582,9 +599,13 @@ export const useApp = create<AppState>((set) => ({
               return prev.usage ?? su ?? null
             })(),
             busy: snap.session.busy,
+            mainTurnActive: snap.session.main_turn_active ?? false,
             pendingInteraction: snap.session.pending_interaction,
             cursor: { seq: snap.as_of_seq, epoch: snap.epoch },
-            streaming: snap.session.busy ? { ...emptyStreaming(), active: true } : emptyStreaming(),
+            streaming:
+              (snap.session.main_turn_active ?? snap.session.busy)
+                ? { ...emptyStreaming(), active: true }
+                : emptyStreaming(),
             approvals: (snap.pending_approvals as ApprovalItem[]) ?? [],
             questions: (snap.pending_questions as QuestionItem[]) ?? [],
             todos: snap.messages.items.length > 0 ? extractTodos(snap.messages.items) : prev.todos,
@@ -631,8 +652,10 @@ export const useApp = create<AppState>((set) => ({
         case 'event.session.work_changed': {
           if (!isMain) break
           next.busy = Boolean(p.busy)
+          next.mainTurnActive = Boolean(p.main_turn_active)
           next.pendingInteraction = String(p.pending_interaction ?? 'none')
-          if (!p.busy) next.streaming = { ...emptyStreaming() }
+          // Streaming follows the turn only: tasks-only busy is not "Working…".
+          if (!p.busy || p.main_turn_active === false) next.streaming = { ...emptyStreaming() }
           break
         }
         case 'session.usage_updated': {
@@ -643,6 +666,7 @@ export const useApp = create<AppState>((set) => ({
           if (!isMain) break
           next.streaming = { active: true, turnId: p.turnId as number, thinking: '', assistant: '' }
           next.busy = true
+          next.mainTurnActive = true
           break
         }
         case 'turn.step.started': {
@@ -814,6 +838,7 @@ export const useApp = create<AppState>((set) => ({
         case 'turn.ended': {
           if (!isMain) break
           next.streaming = { ...next.streaming, active: false }
+          next.mainTurnActive = false
           if (next.usage) next.usage = { ...next.usage, turn_count: next.usage.turn_count + 1 }
           if (p.reason === 'failed' && p.error) {
             next.lastError = `${(p.error as { code?: string }).code}: ${(p.error as { message?: string }).message}`
@@ -827,6 +852,7 @@ export const useApp = create<AppState>((set) => ({
         case 'prompt.completed': {
           if (!isMain) break
           next.busy = false
+          next.mainTurnActive = false
           next.streaming = { ...next.streaming, active: false }
           next.outbox = []
           Object.assign(next, sweepInterrupted(next))

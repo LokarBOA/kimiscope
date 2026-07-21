@@ -14,6 +14,7 @@ import type {
   TaskItem,
 } from '../api/events'
 import { parseSlash, THINKING_LEVELS } from './commands'
+import { transcriptToMessages, type TranscriptPage } from './transcript'
 import { useApp, type ModelInfo, type PromptQueue, type Workspace } from './store'
 
 let socket: KimiSocket | null = null
@@ -486,6 +487,11 @@ function scheduleHistoryPull(sessionId: string) {
 }
 
 async function pullHistory(sessionId: string): Promise<void> {
+  const source = useApp.getState().sessionState[sessionId]?.historySource
+  if (source === 'transcript') {
+    // Same id space — a fresh transcript page cleanly replaces the old one.
+    if (await pullTranscript(sessionId)) return
+  }
   try {
     const res = await get<{ items: Snapshot['messages']['items']; has_more?: boolean }>(
       `/sessions/${sessionId}/messages?page_size=100`,
@@ -499,11 +505,42 @@ async function pullHistory(sessionId: string): Promise<void> {
   }
 }
 
+/** Pull one transcript page (0.28+); false when the route doesn't exist (0.27)
+ *  or the page is empty. `beforeTurn` pages backward by turn id. */
+async function pullTranscript(sessionId: string, beforeTurn?: string): Promise<boolean> {
+  try {
+    const qs = beforeTurn ? `&before_turn=${encodeURIComponent(beforeTurn)}` : ''
+    const res = await get<TranscriptPage>(
+      `/sessions/${sessionId}/transcript?agent_id=main&page_size=100${qs}`,
+    )
+    if (!res.items?.length) return false
+    const messages = transcriptToMessages(res.items)
+    if (beforeTurn) {
+      useApp.getState().prependMessages(sessionId, messages, Boolean(res.has_more))
+    } else {
+      useApp.getState().setMessages(sessionId, messages, Boolean(res.has_more))
+      useApp.getState().setHistorySource(sessionId, 'transcript')
+    }
+    return true
+  } catch (e) {
+    console.warn('transcript pull failed (0.27 daemon?)', sessionId, e)
+    return false
+  }
+}
+
 /** Load the next older page of history for the "Load earlier" button. */
 export async function loadOlder(sessionId: string): Promise<void> {
   const s = useApp.getState().sessionState[sessionId]
   const oldest = s?.messages[0]
   if (!s?.hasMore || !oldest) return
+  if (s.historySource === 'transcript') {
+    // Oldest message of a transcript-backed history is always a turn's user
+    // message, so its id is the turn id the cursor wants.
+    if (!(await pullTranscript(sessionId, oldest.id))) {
+      useApp.getState().prependMessages(sessionId, [], false)
+    }
+    return
+  }
   try {
     const res = await get<{ items: Snapshot['messages']['items']; has_more?: boolean }>(
       `/sessions/${sessionId}/messages?page_size=100&before_id=${encodeURIComponent(oldest.id)}`,
@@ -535,6 +572,9 @@ export async function watchSession(id: string): Promise<void> {
     return
   }
   useApp.getState().applySnapshot(id, snap)
+  // A session with on-disk history the daemon never ingested (TUI-era, daemon
+  // restarts) snapshots empty — rebuild from the wire log when 0.28+ allows.
+  if (snap.messages.items.length === 0) void pullTranscript(id)
   void refreshInteractions(id)
   void refreshTasks(id)
   void refreshGoal(id)
@@ -567,9 +607,11 @@ export async function watchSession(id: string): Promise<void> {
       return watchSession(id)
     }
     if (p.not_found?.includes(id)) {
-      // Session predates the daemon (created by TUI): stream unavailable,
-      // snapshot data is still shown. It becomes streamable once prompted via API.
+      // Session predates the daemon (created by TUI): stream unavailable and
+      // the /messages projection is partial. 0.28+ rebuilds the full history
+      // from the wire log via /transcript — use it when present.
       console.warn('session not streamable by daemon:', id)
+      void pullTranscript(id)
     }
     useApp.getState().markSynced(id)
     useApp.getState().setSyncIssue(null)
@@ -615,7 +657,7 @@ export async function sendPrompt(
   mode: SendMode = 'queue',
   images: { mediaType: string; base64: string }[] = [],
 ): Promise<void> {
-  const busy = useApp.getState().sessionState[sessionId]?.busy ?? false
+  const busy = useApp.getState().sessionState[sessionId]?.mainTurnActive ?? false
   const kind = busy ? mode : 'send'
   const localId = `ob_${Date.now()}_${++outboxCounter}`
   useApp.getState().addToOutbox(sessionId, {

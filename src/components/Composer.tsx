@@ -24,7 +24,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
   const [dismissed, setDismissed] = useState(false)
   const [highlight, setHighlight] = useState(0)
   const [modelPicker, setModelPicker] = useState<'model' | 'thinking' | null>(null)
-  const busy = useApp((st) => st.sessionState[sessionId]?.busy ?? false)
+  const busy = useApp((st) => st.sessionState[sessionId]?.mainTurnActive ?? false)
   const skills = useApp((st) => st.sessionState[sessionId]?.skills)
   const models = useApp((st) => st.models)
   const notice = useApp((st) => st.notice)

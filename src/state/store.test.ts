@@ -67,6 +67,23 @@ describe('streaming', () => {
   })
 })
 
+describe('presence (mainTurnActive)', () => {
+  it('tracks the turn, not busy-with-tasks', () => {
+    const st = useApp.getState()
+    // Daemon reports busy=true with no active turn (background tasks running).
+    st.applyFrame(frame('event.session.work_changed', { busy: true, main_turn_active: false }))
+    expect(useApp.getState().sessionState[SID].busy).toBe(true)
+    expect(useApp.getState().sessionState[SID].mainTurnActive).toBe(false)
+    st.applyFrame(frame('turn.started', { agentId: 'main', turnId: 1 }))
+    expect(useApp.getState().sessionState[SID].mainTurnActive).toBe(true)
+    st.applyFrame(frame('turn.ended', { agentId: 'main', turnId: 1, reason: 'completed' }))
+    expect(useApp.getState().sessionState[SID].mainTurnActive).toBe(false)
+    // busy may stay true (tasks) — presence must not follow it.
+    st.applyFrame(frame('prompt.completed', { agentId: 'main' }))
+    expect(useApp.getState().sessionState[SID].mainTurnActive).toBe(false)
+  })
+})
+
 describe('per-agent separation (subagent cross-talk)', () => {
   it('routes subagent deltas to the subagent record, never the main stream', () => {
     const st = useApp.getState()

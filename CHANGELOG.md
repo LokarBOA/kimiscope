@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.1.5
+
+### Added
+
+- **Wire-complete history for sparse sessions (kimi 0.28+)** — sessions the daemon projects only partially (TUI/CLI-era, or anything missed across a daemon restart) now rebuild their full history from the on-disk wire log via the new `GET /sessions/{id}/transcript` endpoint: it engages when subscribe answers `not_found` or the snapshot is empty, replaces the sparse projection with turn-granular pages (thinking/text/tool frames with outputs), and paginates "Load earlier" by turn. On 0.27 the route is absent and everything silently falls back to the old `/messages` behavior.
+
+### Changed
+
+- **Turn vs background activity now render distinctly** — all "working" signals used `busy`, which stays true while background tasks run (a session serving a picker looked mid-turn an hour after the agent went idle). Turn activity now keys on the daemon's `main_turn_active`: sidebar ⚡N (sky) = sessions mid-turn, new ⟳N (amber) = background-task-only sessions; the session row dot is sky for turns, amber for background; the chat shows "N background tasks running — agent idle" instead of "Working…"; and the Composer only shows Queue/Steer/Stop while an actual turn is active.
+
 ## v0.1.4
 
 ### Changed

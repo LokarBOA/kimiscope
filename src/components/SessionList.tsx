@@ -16,6 +16,7 @@ function SessionRow({ s }: { s: SessionSummary }) {
   const setActive = useApp((st) => st.setActiveSession)
   const live = useApp((st) => st.sessionState[s.id])
   const busy = live?.busy ?? s.busy
+  const turnActive = live?.mainTurnActive ?? s.main_turn_active
   const pending = (live?.pendingInteraction ?? s.pending_interaction) !== 'none'
   const archived = s.archived === true
   // Completion badge: a background task finished recently in a session you're not viewing.
@@ -42,8 +43,15 @@ function SessionRow({ s }: { s: SessionSummary }) {
     >
       <div className="flex items-center gap-2">
         <span
+          title={turnActive ? 'Turn running' : busy ? 'Background tasks running' : pending ? 'Needs input' : undefined}
           className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-            busy ? 'animate-pulse bg-sky-400' : pending ? 'bg-amber-400' : 'bg-zinc-700'
+            turnActive
+              ? 'animate-pulse bg-sky-400'
+              : busy
+                ? 'animate-pulse bg-amber-400/70'
+                : pending
+                  ? 'bg-amber-400'
+                  : 'bg-zinc-700'
           }`}
         />
         <span className="min-w-0 flex-1 truncate text-[13px] text-zinc-200">
@@ -168,9 +176,19 @@ export function SessionList() {
       </div>
       <div className="flex-1 overflow-y-auto p-1.5">
         {groups.map(({ workspace, id, sessions: list }) => {
-          // Presence: other sessions mid-turn on this working tree (clobber warning).
+          // Presence: sessions mid-turn (⚡, sky) vs background-task-only (⟳, amber).
+          // Turn activity keys on main_turn_active — `busy` includes background
+          // tasks (a session serving pages looks "working" while the agent idles).
           const busyTitles = list
-            .filter((s) => !s.archived && (sessionStates[s.id]?.busy ?? s.busy))
+            .filter((s) => !s.archived && (sessionStates[s.id]?.mainTurnActive ?? s.main_turn_active))
+            .map((s) => s.title || 'Untitled')
+          const bgTitles = list
+            .filter(
+              (s) =>
+                !s.archived &&
+                !(sessionStates[s.id]?.mainTurnActive ?? s.main_turn_active) &&
+                (sessionStates[s.id]?.busy ?? s.busy),
+            )
             .map((s) => s.title || 'Untitled')
           return (
             <div key={id} className="mb-2">
@@ -184,6 +202,14 @@ export function SessionList() {
                     className="shrink-0 text-[10px] text-sky-400/90"
                   >
                     ⚡{busyTitles.length}
+                  </span>
+                )}
+                {bgTitles.length > 0 && (
+                  <span
+                    title={`Background tasks in this project: ${bgTitles.join(', ')}`}
+                    className="shrink-0 text-[10px] text-amber-400/80"
+                  >
+                    ⟳{bgTitles.length}
                   </span>
                 )}
                 <button
