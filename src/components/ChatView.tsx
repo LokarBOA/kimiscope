@@ -150,13 +150,15 @@ export function ChatView({ sessionId }: { sessionId: string }) {
       ref={scrollRef}
       onScroll={(e) => {
         const el = e.currentTarget
-        // Unstick only on a genuine user scroll-up: position moves up while
-        // height is stable or growing. History replacement (send/splice/pull)
-        // shrinks content transiently and the browser clamps scrollTop down —
-        // a clamp, not a scroll-up, and it must not unstick the follow.
+        const dist = el.scrollHeight - el.scrollTop - el.clientHeight
+        // Unstick ONLY on a genuine user scroll-up (position up while height
+        // is stable/growing — history-replacement clamps shrink height and
+        // don't count). Re-stick whenever the view lands at the bottom.
+        // Anything else — textarea growth shrinking the viewport, layout
+        // reflow — leaves the follow alone.
         const clamping = el.scrollHeight < lastHeightRef.current - 1
         if (!clamping && el.scrollTop < lastTopRef.current - 1) stickRef.current = false
-        else stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+        else if (dist < 80) stickRef.current = true
         lastTopRef.current = el.scrollTop
         lastHeightRef.current = el.scrollHeight
       }}

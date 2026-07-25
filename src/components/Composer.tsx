@@ -69,17 +69,27 @@ export function Composer({ sessionId }: { sessionId: string }) {
 
   function attachImage(file: File) {
     if (!file.type.startsWith('image/')) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const dataUrl = String(reader.result)
+    // Downscale before attach: the daemon rejects bodies over ~1MiB, and raw
+    // screenshots sail past it. Cap 1600px JPEG — plenty for review purposes.
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const scale = Math.min(1, 1600 / Math.max(img.width, img.height, 1))
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.width * scale)
+      canvas.height = Math.round(img.height * scale)
+      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
       const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1)
       const cur = useApp.getState().drafts[sessionId] ?? { text: '', images: [] }
       setDraft(sessionId, {
         ...cur,
-        images: [...cur.images, { mediaType: file.type, base64, previewUrl: dataUrl }],
+        images: [...cur.images, { mediaType: 'image/jpeg', base64, previewUrl: dataUrl }],
       })
     }
-    reader.readAsDataURL(file)
+    img.onerror = () => URL.revokeObjectURL(url)
+    img.src = url
   }
 
   /** Run a `/command` client-side; true when handled (input cleared, notice shown). */
@@ -177,6 +187,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
       if (taRef.current) taRef.current.style.height = 'auto'
     } catch (e) {
       console.error('prompt failed', e)
+      setNotice(`prompt failed: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
       setSending(false)
     }

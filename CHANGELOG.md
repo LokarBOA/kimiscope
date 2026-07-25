@@ -10,6 +10,8 @@
 
 - **New sessions verify their profile actually stuck** — a dropped profile write (seen on daemon warm-up edges) used to surface only as `model.not_configured` on the first prompt. The app now re-reads `/status` after profiling, retries once, and tells you to pick a model in the rail if it still didn't take.
 - **Follow-scroll no longer unsticks on send** — the v0.1.7 fix made unstick depend on scroll position moving up, but sending a message replaces history wholesale and the browser *clamps* scrollTop downward during the transient shrink, which read as a scroll-up. Unstick now also requires the height to be stable or growing — clamps can't trigger it.
+- **Follow-scroll survives multi-line composing** — a growing textarea shrinks the viewport and pushed the distance past the unstick threshold without any scroll-up; unstick now only fires on genuine upward scrolls, and landing at the bottom re-sticks.
+- **Image sends no longer die silently on big screenshots** — the daemon caps request bodies at ~1MiB (`50001 Request body is too large`), and raw clipboard screenshots sail past it. Pasted/attached images are now downscaled client-side (≤1600px JPEG) before sending, and a failed send shows `prompt failed: …` in the composer instead of leaving the draft stuck with no explanation.
 
 ## v0.1.7
 
