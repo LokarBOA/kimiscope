@@ -5,6 +5,7 @@
 ### Added
 
 - **Background-task indicator expands inline** — the chat's "N background tasks running — agent idle" line is now a toggle that lists the running tasks right there in the feed, each with the same expandable live log tail as the rail's Tasks rows.
+- **Inline video results** — ReadMediaFile video results (`<video path="…">` — path only, no bytes) render a playable `<video>` in the tool card, streamed from disk via a new `media://` protocol handler (extension-allowlisted, no file:// workarounds), with the filename as an open-externally link. Browser dev shows a 🎬 chip + link instead.
 
 ### Fixed
 

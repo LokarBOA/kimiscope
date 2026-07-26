@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import DiffViewer from 'react-diff-viewer-continued'
 import type { SubagentRecord, ToolCallRecord } from '../api/events'
 import { openExternal } from '../api/openPath'
+import { mediaUrl } from '../api/mediaUrl'
 
 function fmtArgs(args: unknown): string {
   if (args == null) return ''
@@ -38,6 +39,24 @@ function extractResultImages(output: unknown): string[] {
     }
   }
   return urls
+}
+
+/** Video results carry a path tag: either a plain string
+ *  `<video path="C:/…/clip.webm"></video>` (transcript) or content blocks with
+ *  the tag in a text block plus a `video_url` companion (REST history — the
+ *  ms:// id is not downloadable over REST, so the path is the only source). */
+function extractResultVideos(output: unknown): string[] {
+  const paths: string[] = []
+  const scan = (text: string) => {
+    for (const m of text.matchAll(/<video path="([^"]+)"/g)) paths.push(m[1])
+  }
+  if (typeof output === 'string') scan(output)
+  else if (Array.isArray(output)) {
+    for (const b of output as Record<string, unknown>[]) {
+      if (b?.type === 'text' && typeof b.text === 'string') scan(b.text)
+    }
+  }
+  return paths
 }
 
 const ICONS: Record<string, string> = {
@@ -163,6 +182,7 @@ export function ToolCard({
       : undefined
   const imageName =
     typeof imagePath === 'string' && imagePath ? (imagePath.split(/[\\/]/).pop() ?? null) : null
+  const resultVideos = extractResultVideos(call.output)
 
   const dot =
     call.status === 'running'
@@ -277,6 +297,37 @@ export function ToolCard({
               />
             </div>
           ))}
+        </div>
+      )}
+      {resultVideos.length > 0 && (
+        <div className="flex flex-wrap gap-2 border-t border-zinc-800/60 px-3 py-2">
+          {resultVideos.map((path, i) => {
+            const name = path.split(/[\\/]/).pop() ?? path
+            const src = mediaUrl(path)
+            return (
+              <div key={i} className="flex flex-col gap-1">
+                <button
+                  onClick={() => void openExternal(path)}
+                  title={`${path} — open externally`}
+                  className="max-w-56 truncate text-left font-mono text-[11px] text-sky-400/90 underline decoration-zinc-600 underline-offset-2 hover:text-sky-300"
+                >
+                  {name}
+                </button>
+                {src ? (
+                  <video
+                    controls
+                    preload="metadata"
+                    src={src}
+                    className="max-h-72 rounded-md border border-zinc-700 bg-black"
+                  />
+                ) : (
+                  <span className="rounded bg-zinc-700 px-1.5 py-0.5 text-[11px] text-zinc-300">
+                    🎬 video
+                  </span>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
       {body}
