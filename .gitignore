@@ -31,3 +31,4 @@ src-tauri/target/
 # LokarBoA gh token drop (user-provided, never commit)
 .lokarboa-token
 .img-sid
+.video-probe.json
