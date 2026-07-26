@@ -304,7 +304,10 @@ fn open_path(path: &str) -> Result<(), String> {  #[cfg(windows)]
   let mut cmd = Command::new("open");
   #[cfg(all(unix, not(target_os = "macos")))]
   let mut cmd = Command::new("xdg-open");
-  cmd.arg(path);
+  // explorer.exe falls back to Documents on forward-slash paths — normalize.
+  #[cfg(windows)]
+  let path = path.replace('/', "\\");
+  cmd.arg(&path);
   #[cfg(windows)]
   {
     use std::os::windows::process::CommandExt;
@@ -314,57 +317,6 @@ fn open_path(path: &str) -> Result<(), String> {  #[cfg(windows)]
   // explorer.exe reports odd exit codes even on success; spawning is enough.
   cmd.spawn().map_err(|e| format!("failed to open {path}: {e}"))?;
   Ok(())
-}
-
-fn percent_decode(s: &str) -> String {
-  let bytes = s.as_bytes();
-  let mut out = Vec::with_capacity(bytes.len());
-  let mut i = 0;
-  while i < bytes.len() {
-    if bytes[i] == b'%' && i + 2 < bytes.len() {
-      if let Ok(v) = u8::from_str_radix(&s[i + 1..i + 3], 16) {
-        out.push(v);
-        i += 3;
-        continue;
-      }
-    }
-    out.push(bytes[i]);
-    i += 1;
-  }
-  String::from_utf8_lossy(&out).into_owned()
-}
-
-/// Serve a local media file for the `media://` protocol. Extension-allowlisted
-/// — this exists to play video tool results, not to be a general file server.
-fn serve_media(req: tauri::http::Request<Vec<u8>>) -> tauri::http::Response<Vec<u8>> {
-  let path = percent_decode(req.uri().path().trim_start_matches('/'));
-  let ext = path.rsplit('.').next().unwrap_or("").to_ascii_lowercase();
-  let mime = match ext.as_str() {
-    "webm" => "video/webm",
-    "mp4" | "m4v" => "video/mp4",
-    "mov" => "video/quicktime",
-    "png" => "image/png",
-    "jpg" | "jpeg" => "image/jpeg",
-    "gif" => "image/gif",
-    "webp" => "image/webp",
-    _ => {
-      return tauri::http::Response::builder()
-        .status(403)
-        .body(Vec::new())
-        .unwrap()
-    }
-  };
-  match fs::read(&path) {
-    Ok(bytes) => tauri::http::Response::builder()
-      .status(200)
-      .header("content-type", mime)
-      .body(bytes)
-      .unwrap(),
-    Err(_) => tauri::http::Response::builder()
-      .status(404)
-      .body(Vec::new())
-      .unwrap(),
-  }
 }
 
 #[cfg(test)]
@@ -426,12 +378,6 @@ mod tests {
 pub fn run() {
   tauri::Builder::default()
     .plugin(tauri_plugin_dialog::init())
-    // media://localhost/<percent-encoded absolute path> streams local media
-    // files (video tool results) with an extension allowlist — WebView2 can't
-    // load file:// URLs, and big videos shouldn't go through base64.
-    .register_uri_scheme_protocol("media", |_ctx, req| {
-      serve_media(req)
-    })
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
