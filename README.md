@@ -22,7 +22,7 @@ The same choice unlocks the feature surface ACP's baseline (prompt / cancel / pe
 
 ## Install
 
-**Requirements:** Windows, [Node.js](https://nodejs.org), and the [Kimi Code CLI](https://www.kimi.com/code) (`npm install -g @moonshot-ai/kimi-code`, then `kimi login` once). Verified against kimi 0.27.0–0.29.2 — later versions are untested until verified (the daemon API is model-agnostic; any Kimi model the CLI supports renders fine). Inline video playback needs kimi ≥ 0.29; older daemons get an open-in-player link instead.
+**Requirements:** Windows, [Node.js](https://nodejs.org), and the [Kimi Code CLI](https://www.kimi.com/code) (`npm install -g @moonshot-ai/kimi-code`, then `kimi login` once). Verified against kimi 0.27.0–0.30.0 — later versions are untested until verified (the daemon API is model-agnostic; any Kimi model the CLI supports renders fine). Inline video playback needs kimi ≥ 0.29; older daemons get an open-in-player link instead.
 
 **Download the installer from [Releases](../../releases)** (MSI or NSIS `KimiScope_*_setup.exe`) and run it. KimiScope auto-starts the local kimi server (`kimi web`) and reads its token — no further wiring.
 

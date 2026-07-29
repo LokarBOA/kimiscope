@@ -394,16 +394,26 @@ export interface paths {
                                 /** @enum {string} */
                                 kind: "ok";
                                 summary: {
-                                    label: string;
+                                    name?: string;
+                                    window?: {
+                                        duration: number;
+                                        /** @enum {string} */
+                                        unit: "minute" | "hour" | "day" | "week";
+                                    };
                                     used: number;
                                     limit: number;
-                                    reset_hint?: string;
+                                    reset_at?: string;
                                 } | null;
                                 limits: {
-                                    label: string;
+                                    name?: string;
+                                    window?: {
+                                        duration: number;
+                                        /** @enum {string} */
+                                        unit: "minute" | "hour" | "day" | "week";
+                                    };
                                     used: number;
                                     limit: number;
-                                    reset_hint?: string;
+                                    reset_at?: string;
                                 }[];
                                 extra_usage: {
                                     balance_cents: number;
@@ -476,6 +486,7 @@ export interface paths {
                                 models?: {
                                     [key: string]: unknown;
                                 };
+                                secondary_model?: unknown;
                                 thinking?: unknown;
                                 plan_mode?: boolean;
                                 yolo?: boolean;
@@ -523,6 +534,7 @@ export interface paths {
                         models?: {
                             [key: string]: unknown;
                         };
+                        secondary_model?: unknown;
                         thinking?: unknown;
                         plan_mode?: boolean;
                         yolo?: boolean;
@@ -568,6 +580,7 @@ export interface paths {
                                 models?: {
                                     [key: string]: unknown;
                                 };
+                                secondary_model?: unknown;
                                 thinking?: unknown;
                                 plan_mode?: boolean;
                                 yolo?: boolean;
@@ -2437,6 +2450,109 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Global full-text search over user messages, assistant replies and session titles across all sessions */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        query: string;
+                        /** @enum {string} */
+                        mode?: "terms" | "literal";
+                        /** @enum {string} */
+                        op?: "AND" | "OR";
+                        container?: {
+                            session_id?: string;
+                            agent_id?: string;
+                        };
+                        /** @enum {string} */
+                        role?: "user" | "assistant" | "title";
+                        start_time?: number;
+                        end_time?: number;
+                        /** @enum {string} */
+                        sort?: "score" | "time_desc" | "time_asc";
+                        page_size?: number;
+                        page_token?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                items: {
+                                    session_id: string;
+                                    workspace_id: string;
+                                    session_title: string;
+                                    agent_id: string;
+                                    /** @enum {string} */
+                                    role: "user" | "assistant" | "title";
+                                    snippet: string;
+                                    time: number;
+                                    turn?: number;
+                                    step_id?: string;
+                                    score: number;
+                                }[];
+                                has_more: boolean;
+                                page_token?: string;
+                                /** @enum {string} */
+                                incomplete?: "candidate_cap";
+                                index_state: {
+                                    /** @enum {string} */
+                                    state: "building" | "ready" | "readonly";
+                                    indexed_sessions: number;
+                                    total_sessions: number;
+                                    documents: number;
+                                };
+                                /** @enum {string} */
+                                source: "live" | "index";
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions/{session_id}/tasks": {
         parameters: {
             query?: never;
@@ -3320,6 +3436,23 @@ export interface paths {
         get: operations["fsContent"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/fs:mkdir": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Create a directory on the host filesystem by absolute path (folder-picker "new folder" backend). Non-recursive: the parent directory must already exist. */
+        post: operations["fsMkdir"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7652,6 +7785,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": string;
+                };
+            };
+        };
+    };
+    fsMkdir: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    path: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {number} */
+                        code: 0;
+                        msg: string;
+                        data: {
+                            path: string;
+                        };
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40001;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40409;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40411;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40919;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    };
                 };
             };
         };

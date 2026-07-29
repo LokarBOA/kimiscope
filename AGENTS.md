@@ -25,7 +25,7 @@ To set up KimiScope on a new Windows machine, an agent can do everything with th
   - `src/state/` — `store.ts` (zustand, per-session state + frame reducer), `sync.ts` (socket lifecycle, snapshot→subscribe `SessionSync`, history pulls, notifications).
   - `src/components/` — SessionList (workspaces), ChatView (messages/streaming), ToolCard (per-tool renderers incl. diffs + subagent panels), ThinkingBlock, ApprovalBar, QuestionDialog, InsightRail (todos/usage), Composer (+ CommandMenu `/` popup), ErrorSurface.
 
-## Daemon protocol facts (verified against kimi 0.27.0–0.29.2)
+## Daemon protocol facts (verified against kimi 0.27.0–0.30.0)
 
 - WS flow: connect (subprotocol auth) → `client_hello` → REST `GET /sessions/{id}/snapshot` → `subscribe` with cursor `{seq: snapshot.as_of_seq, epoch: snapshot.epoch}` → `session_event` frames. Reply to `ping` with `pong`. On reconnect/`resync_required`/context rewrite: re-snapshot.
 - **The WS stream never carries completed assistant messages** — only the user-message `context.spliced` and live deltas. Pull `GET /sessions/{id}/messages` at `turn.ended`/`prompt.completed` (debounced). `/messages` is newest-first (reverse it); snapshot is chronological.
