@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.1.9
+
+### Added
+
+- **Inline video player for video results** — ReadMediaFile videos now play right in the chat: filename link on top (still opens the OS default player), a real `<video controls>` below, fed by a blob URL from the daemon's new `GET /api/v1/fs:content` endpoint (kimi-code 0.29+). Fetches start only when the card scrolls near the viewport, files over 25MB and daemons older than 0.29 fall back to the 🎬 chip+link.
+
+### Changed
+
+- **Verified against kimi-code 0.29.2** — protocol sweep (REST + WS + UI) found no breaks: prompt content-block arrays, transcript turn/step/frame shapes, and all handled event types are unchanged. New `agent.created` frames and transcript `marker` items are safely ignored. `reference/*.json` specs and generated types now track 0.29.2 (70 paths, +`fs:content`, `oauth/usage`, `catalog/providers`, `transcript/{ops,user-messages,plan}`; nothing removed).
+
 ## v0.1.8
 
 ### Added

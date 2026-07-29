@@ -361,6 +361,79 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/oauth/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get the managed account usage summary */
+        get: {
+            parameters: {
+                query?: {
+                    provider?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                /** @enum {string} */
+                                kind: "ok";
+                                summary: {
+                                    label: string;
+                                    used: number;
+                                    limit: number;
+                                    reset_hint?: string;
+                                } | null;
+                                limits: {
+                                    label: string;
+                                    used: number;
+                                    limit: number;
+                                    reset_hint?: string;
+                                }[];
+                                extra_usage: {
+                                    balance_cents: number;
+                                    total_cents: number;
+                                    monthly_charge_limit_enabled: boolean;
+                                    monthly_charge_limit_cents: number;
+                                    monthly_used_cents: number;
+                                    currency: string;
+                                } | null;
+                            } | {
+                                /** @enum {string} */
+                                kind: "error";
+                                message: string;
+                                status?: number;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/config": {
         parameters: {
             query?: never;
@@ -653,41 +726,8 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/providers{action}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @description Refresh provider model metadata. Use `:refresh` for all providers or `:refresh_oauth` for OAuth-backed providers only. */
-        post: operations["refreshProviderModels"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/providers/{tail}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** @description Refresh model metadata for a single provider */
-        post: operations["refreshProvider"];
+        /** @description Create a provider manually (type + credentials + model list). When no global default_model is configured (fresh setup), it is seeded with the new provider default (or first) model; an existing default is never modified. */
+        post: operations["createProvider"];
         delete?: never;
         options?: never;
         head?: never;
@@ -701,7 +741,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Get a configured provider by ID */
+        /** @description Get a configured provider by ID. Unlike the list route, the response reveals the stored `api_key` when one is set, so local clients can prefill an edit form. */
         get: {
             parameters: {
                 query?: never;
@@ -732,6 +772,7 @@ export interface paths {
                                 /** @enum {string} */
                                 status: "connected" | "error" | "unconfigured";
                                 models?: string[];
+                                api_key?: string;
                             };
                             request_id: string;
                             details?: unknown;
@@ -756,6 +797,76 @@ export interface paths {
                 };
             };
         };
+        /** @description Replace a provider in one save (type + base_url + model list), optionally renaming it via `new_id` (the providers key, model aliases, default_provider and a default_model pointing at an old alias all migrate). `api_key` is tri-state: omitted keeps the stored key, "" clears it, any other value replaces it. The provider's model aliases are rebuilt from `models` — aliases no longer listed disappear from config.toml, other providers' aliases are untouched. Beyond the rename migration, the global default pointers are never modified. Answers 200 with `{provider}`. OAuth-managed providers are rejected: log out via /oauth/logout instead. */
+        put: operations["replaceProvider"];
+        post?: never;
+        /** @description Delete a provider and all of its model aliases (204, no body). The global default_provider/default_model pointers are left untouched — they are the user's settings, not this endpoint's to garbage-collect. OAuth-managed providers are rejected: log out via /oauth/logout instead. */
+        delete: operations["deleteProvider"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/providers{action}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Provider collection actions. Use `:refresh` for all providers or `:refresh_oauth` for OAuth-backed providers only. Use `:import_catalog` to import a models.dev directory entry as a configured provider (201): the wire protocol and endpoint come from the catalog resolution (`base_url` overrides it; required when the entry resolves to needs-base-url), all catalogued models are written as aliases, and importing an id that already exists is a refresh — the provider entry and its aliases are rewritten from the catalog (OAuth-managed providers are rejected instead). `id` overrides the catalog id as the local provider id. Use `:import_registry` to import a models.dev-shaped private registry (api.json `url` + optional Bearer `api_key`, 201): every listed provider is written with a `source` blob so scheduled refreshes rediscover it, and re-importing the same URL removes providers that disappeared upstream (the URL is the stable registry identity). For both imports the global default_provider/default_model pointers are never modified — except that a default_model is seeded from the first imported model when none is configured at all (fresh setup). */
+        post: operations["providerCollectionAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/providers/{tail}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Refresh model metadata for a single provider */
+        post: operations["refreshProvider"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Browse the models.dev directory (server-proxied, 10-minute in-memory cache, built-in snapshot fallback). Entries the server cannot import carry `rejected: true` with a machine-readable `reject_reason`; entries with `needs_base_url: true` require a base URL at import time. Items keep the upstream directory order. */
+        get: operations["listCatalogProviders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/providers/{catalog_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get one models.dev directory entry by catalog id. */
+        get: operations["getCatalogProvider"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1944,6 +2055,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         web_log?: string;
+                        desktop?: boolean;
                     };
                 };
             };
@@ -2091,6 +2203,7 @@ export interface paths {
                                             /** @enum {string} */
                                             kind: "url";
                                             url: string;
+                                            id?: string;
                                         } | {
                                             /** @enum {string} */
                                             kind: "base64";
@@ -2108,6 +2221,7 @@ export interface paths {
                                             /** @enum {string} */
                                             kind: "url";
                                             url: string;
+                                            id?: string;
                                         } | {
                                             /** @enum {string} */
                                             kind: "base64";
@@ -2232,6 +2346,7 @@ export interface paths {
                                         /** @enum {string} */
                                         kind: "url";
                                         url: string;
+                                        id?: string;
                                     } | {
                                         /** @enum {string} */
                                         kind: "base64";
@@ -2249,6 +2364,7 @@ export interface paths {
                                         /** @enum {string} */
                                         kind: "url";
                                         url: string;
+                                        id?: string;
                                     } | {
                                         /** @enum {string} */
                                         kind: "base64";
@@ -3193,6 +3309,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/fs:content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Serve the raw content of any file on the host filesystem by absolute path. Supports ETag caching and single-range requests. */
+        get: operations["fsContent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/files": {
         parameters: {
             query?: never;
@@ -3674,6 +3807,7 @@ export interface paths {
                                     /** @enum {string} */
                                     source: "builtin" | "skill" | "mcp";
                                     mcp_server_id?: string;
+                                    active?: boolean;
                                 }[];
                             };
                             request_id: string;
@@ -4193,6 +4327,7 @@ export interface paths {
                                                 /** @enum {string} */
                                                 kind: "url";
                                                 url: string;
+                                                id?: string;
                                             } | {
                                                 /** @enum {string} */
                                                 kind: "base64";
@@ -4210,6 +4345,7 @@ export interface paths {
                                                 /** @enum {string} */
                                                 kind: "url";
                                                 url: string;
+                                                id?: string;
                                             } | {
                                                 /** @enum {string} */
                                                 kind: "base64";
@@ -4459,6 +4595,15 @@ export interface paths {
                                             output?: unknown;
                                             display?: unknown;
                                             error?: string;
+                                            inputText?: string;
+                                            progress?: {
+                                                /** @enum {string} */
+                                                kind: "stdout" | "stderr" | "progress" | "status" | "custom";
+                                                text?: string;
+                                                percent?: number;
+                                                customKind?: string;
+                                                customData?: unknown;
+                                            };
                                             taskId?: string;
                                             approvalId?: string;
                                             todoId?: string;
@@ -4467,18 +4612,6 @@ export interface paths {
                                                 /** @enum {string} */
                                                 role?: "child" | "member";
                                             }[];
-                                        } | {
-                                            /** @enum {string} */
-                                            kind: "interaction";
-                                            frameId: string;
-                                            interactionId: string;
-                                            /** @enum {string} */
-                                            interactionKind: "approval" | "question";
-                                            toolCallId?: string;
-                                            /** @enum {string} */
-                                            state: "pending" | "approved" | "rejected" | "cancelled" | "answered" | "dismissed";
-                                            request?: unknown;
-                                            response?: unknown;
                                         } | {
                                             /** @enum {string} */
                                             kind: "notice";
@@ -4491,6 +4624,32 @@ export interface paths {
                                         })[];
                                         startedAt?: string;
                                         endedAt?: string;
+                                        usage?: {
+                                            inputOther: number;
+                                            output: number;
+                                            inputCacheRead: number;
+                                            inputCacheCreation: number;
+                                        };
+                                        finishReason?: string;
+                                        timing?: {
+                                            llmFirstTokenLatencyMs?: number;
+                                            llmStreamDurationMs?: number;
+                                            llmRequestBuildMs?: number;
+                                            llmServerFirstTokenMs?: number;
+                                            llmServerDecodeMs?: number;
+                                            llmClientConsumeMs?: number;
+                                        };
+                                        retry?: {
+                                            failedAttempt: number;
+                                            nextAttempt: number;
+                                            maxAttempts: number;
+                                            delayMs: number;
+                                            errorName: string;
+                                            errorMessage: string;
+                                            statusCode?: number;
+                                        };
+                                        endReason?: string;
+                                        endMessage?: string;
                                     }[];
                                     startedAt?: string;
                                     endedAt?: string;
@@ -4500,6 +4659,8 @@ export interface paths {
                                         cachedTokens?: number;
                                         cost?: number;
                                     };
+                                    durationMs?: number;
+                                    error?: string;
                                 } | {
                                     /** @enum {string} */
                                     kind: "marker";
@@ -4527,13 +4688,22 @@ export interface paths {
                                     outputTail: string;
                                     startedAt?: string;
                                     endedAt?: string;
+                                    resultSummary?: string;
+                                    error?: string;
+                                    stateReason?: string;
+                                    usage?: {
+                                        inputOther: number;
+                                        output: number;
+                                        inputCacheRead: number;
+                                        inputCacheCreation: number;
+                                    };
                                 }[];
                                 /** @default [] */
                                 interactions: {
                                     interactionId: string;
                                     /** @enum {string} */
                                     interactionKind: "approval" | "question";
-                                    toolCallId: string;
+                                    toolCallId?: string;
                                     /** @enum {string} */
                                     state: "pending" | "approved" | "rejected" | "cancelled" | "answered" | "dismissed";
                                     request?: unknown;
@@ -4566,6 +4736,17 @@ export interface paths {
                                     }[];
                                     updatedAt?: string;
                                 }[];
+                                /** @default [] */
+                                prompts: {
+                                    promptId: string;
+                                    /** @enum {string} */
+                                    status: "running" | "queued" | "blocked" | "completed" | "failed" | "aborted";
+                                    userMessageId?: string;
+                                    content?: unknown;
+                                    createdAt: string;
+                                    finishedAt?: string;
+                                    steeredAt?: string;
+                                }[];
                                 meta: {
                                     goal?: {
                                         objective: string;
@@ -4578,6 +4759,7 @@ export interface paths {
                                     modes?: {
                                         plan?: {
                                             reviewPath?: string;
+                                            version?: number;
                                         };
                                         swarm?: {
                                             trigger?: string;
@@ -4585,6 +4767,104 @@ export interface paths {
                                     };
                                     /** @enum {string} */
                                     activity?: "idle" | "turn" | "disposing" | "unknown";
+                                    agent?: {
+                                        model?: string;
+                                        thinkingEffort?: string;
+                                        usage?: {
+                                            byModel?: {
+                                                [key: string]: {
+                                                    inputOther: number;
+                                                    output: number;
+                                                    inputCacheRead: number;
+                                                    inputCacheCreation: number;
+                                                };
+                                            };
+                                            currentTurn?: {
+                                                inputOther: number;
+                                                output: number;
+                                                inputCacheRead: number;
+                                                inputCacheCreation: number;
+                                            };
+                                            total?: {
+                                                inputOther: number;
+                                                output: number;
+                                                inputCacheRead: number;
+                                                inputCacheCreation: number;
+                                            };
+                                        };
+                                        contextTokens?: number;
+                                        maxContextTokens?: number;
+                                        contextUsage?: number;
+                                        /** @enum {string} */
+                                        permission?: "manual" | "yolo" | "auto";
+                                        phase?: {
+                                            /** @enum {string} */
+                                            kind: "idle";
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "running";
+                                            turnId: number;
+                                            step: number;
+                                            stepId: string;
+                                            since: number;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "streaming";
+                                            turnId: number;
+                                            step: number;
+                                            stepId: string;
+                                            /** @enum {string} */
+                                            stream: "assistant" | "thinking" | "tool_call";
+                                            toolCallId?: string;
+                                            toolName?: string;
+                                            since: number;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "tool_call";
+                                            turnId: number;
+                                            step: number;
+                                            toolCallId: string;
+                                            name: string;
+                                            since: number;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "retrying";
+                                            turnId: number;
+                                            step: number;
+                                            stepId: string;
+                                            failedAttempt: number;
+                                            nextAttempt: number;
+                                            maxAttempts: number;
+                                            delayMs: number;
+                                            errorName?: string;
+                                            statusCode?: number;
+                                            since: number;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "awaiting_approval";
+                                            turnId: number;
+                                            step?: number;
+                                            approval?: unknown;
+                                            since: number;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "interrupted";
+                                            turnId: number;
+                                            step?: number;
+                                            /** @enum {string} */
+                                            reason: "aborted" | "max_steps" | "error";
+                                            message?: string;
+                                            at: number;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "ended";
+                                            turnId: number;
+                                            /** @enum {string} */
+                                            reason: "completed" | "cancelled" | "failed" | "blocked";
+                                            durationMs?: number;
+                                            at: number;
+                                        };
+                                    };
                                 };
                                 agents: {
                                     agentId: string;
@@ -4593,8 +4873,10 @@ export interface paths {
                                     parentAgentId?: string;
                                     label?: string;
                                     createdAt?: string;
+                                    disposedAt?: string;
                                 }[];
                                 pending_interactions: string[];
+                                seq?: number;
                             };
                             request_id: string;
                             details?: unknown;
@@ -4612,6 +4894,1056 @@ export interface paths {
                         } | {
                             /** @enum {number} */
                             code: 40401;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/transcript/ops": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Point-to-point transcript catch-up: journaled op batches with seq > since_seq for one agent, oldest first. complete:false means the session is not live or the journal no longer reaches back to since_seq — the caller must fall back to a full transcript refresh */
+        get: {
+            parameters: {
+                query: {
+                    agent_id: string;
+                    since_seq: number;
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                agent_id: string;
+                                batches: {
+                                    seq: number;
+                                    ops: ({
+                                        /** @enum {string} */
+                                        op: "reset";
+                                        agentId: string;
+                                        snapshot: {
+                                            items: ({
+                                                /** @enum {string} */
+                                                kind: "turn";
+                                                turnId: string;
+                                                ordinal: number;
+                                                /** @enum {string} */
+                                                state: "queued" | "running" | "completed" | "failed" | "cancelled";
+                                                origin: {
+                                                    /** @enum {string} */
+                                                    kind: "user";
+                                                    payload?: unknown;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind: "cron";
+                                                    taskId?: string;
+                                                    payload?: unknown;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind: "task";
+                                                    taskId: string;
+                                                    payload?: unknown;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind: "hook";
+                                                    payload?: unknown;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind: "compaction";
+                                                    payload?: unknown;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind: "side";
+                                                    payload?: unknown;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind: "other";
+                                                    payload?: unknown;
+                                                };
+                                                prompt?: string;
+                                                attachmentIds?: string[];
+                                                steps: {
+                                                    /** @enum {string} */
+                                                    kind: "step";
+                                                    stepId: string;
+                                                    turnId: string;
+                                                    ordinal: number;
+                                                    /** @enum {string} */
+                                                    state: "running" | "completed" | "interrupted" | "failed";
+                                                    frames: ({
+                                                        /** @enum {string} */
+                                                        kind: "text";
+                                                        frameId: string;
+                                                        /** @enum {string} */
+                                                        role: "assistant" | "user";
+                                                        text: string;
+                                                        attachmentIds?: string[];
+                                                        taskId?: string;
+                                                    } | {
+                                                        /** @enum {string} */
+                                                        kind: "thinking";
+                                                        frameId: string;
+                                                        text: string;
+                                                    } | {
+                                                        /** @enum {string} */
+                                                        kind: "tool";
+                                                        frameId: string;
+                                                        toolCallId: string;
+                                                        name: string;
+                                                        view?: string;
+                                                        /** @enum {string} */
+                                                        state: "running" | "done" | "error";
+                                                        input?: unknown;
+                                                        output?: unknown;
+                                                        display?: unknown;
+                                                        error?: string;
+                                                        inputText?: string;
+                                                        progress?: {
+                                                            /** @enum {string} */
+                                                            kind: "stdout" | "stderr" | "progress" | "status" | "custom";
+                                                            text?: string;
+                                                            percent?: number;
+                                                            customKind?: string;
+                                                            customData?: unknown;
+                                                        };
+                                                        taskId?: string;
+                                                        approvalId?: string;
+                                                        todoId?: string;
+                                                        agentRefs?: {
+                                                            agentId: string;
+                                                            /** @enum {string} */
+                                                            role?: "child" | "member";
+                                                        }[];
+                                                    } | {
+                                                        /** @enum {string} */
+                                                        kind: "notice";
+                                                        frameId: string;
+                                                        /** @enum {string} */
+                                                        level: "error" | "warning" | "info";
+                                                        source?: string;
+                                                        message: string;
+                                                        detail?: unknown;
+                                                    })[];
+                                                    startedAt?: string;
+                                                    endedAt?: string;
+                                                    usage?: {
+                                                        inputOther: number;
+                                                        output: number;
+                                                        inputCacheRead: number;
+                                                        inputCacheCreation: number;
+                                                    };
+                                                    finishReason?: string;
+                                                    timing?: {
+                                                        llmFirstTokenLatencyMs?: number;
+                                                        llmStreamDurationMs?: number;
+                                                        llmRequestBuildMs?: number;
+                                                        llmServerFirstTokenMs?: number;
+                                                        llmServerDecodeMs?: number;
+                                                        llmClientConsumeMs?: number;
+                                                    };
+                                                    retry?: {
+                                                        failedAttempt: number;
+                                                        nextAttempt: number;
+                                                        maxAttempts: number;
+                                                        delayMs: number;
+                                                        errorName: string;
+                                                        errorMessage: string;
+                                                        statusCode?: number;
+                                                    };
+                                                    endReason?: string;
+                                                    endMessage?: string;
+                                                }[];
+                                                startedAt?: string;
+                                                endedAt?: string;
+                                                usage?: {
+                                                    inputTokens?: number;
+                                                    outputTokens?: number;
+                                                    cachedTokens?: number;
+                                                    cost?: number;
+                                                };
+                                                durationMs?: number;
+                                                error?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind: "marker";
+                                                markerId: string;
+                                                marker: string;
+                                                payload?: unknown;
+                                                at?: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind: "taskref";
+                                                refId: string;
+                                                taskId: string;
+                                                at?: string;
+                                            })[];
+                                            tasks: {
+                                                taskId: string;
+                                                /** @enum {string} */
+                                                kind: "shell" | "subagent" | "tool" | "other";
+                                                /** @enum {string} */
+                                                state: "running" | "completed" | "failed" | "timed_out" | "killed" | "lost";
+                                                detached: boolean;
+                                                description?: string;
+                                                agentId?: string;
+                                                outputTail: string;
+                                                startedAt?: string;
+                                                endedAt?: string;
+                                                resultSummary?: string;
+                                                error?: string;
+                                                stateReason?: string;
+                                                usage?: {
+                                                    inputOther: number;
+                                                    output: number;
+                                                    inputCacheRead: number;
+                                                    inputCacheCreation: number;
+                                                };
+                                            }[];
+                                            /** @default [] */
+                                            interactions: {
+                                                interactionId: string;
+                                                /** @enum {string} */
+                                                interactionKind: "approval" | "question";
+                                                toolCallId?: string;
+                                                /** @enum {string} */
+                                                state: "pending" | "approved" | "rejected" | "cancelled" | "answered" | "dismissed";
+                                                request?: unknown;
+                                                response?: unknown;
+                                            }[];
+                                            /** @default [] */
+                                            attachments: {
+                                                attachmentId: string;
+                                                mediaType: string;
+                                                name?: string;
+                                                size?: number;
+                                                source?: {
+                                                    /** @enum {string} */
+                                                    kind: "url";
+                                                    url: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind: "file";
+                                                    fileId: string;
+                                                };
+                                                placeholder?: string;
+                                            }[];
+                                            /** @default [] */
+                                            todos: {
+                                                todoId: string;
+                                                items: {
+                                                    title: string;
+                                                    /** @enum {string} */
+                                                    status: "pending" | "in_progress" | "done";
+                                                }[];
+                                                updatedAt?: string;
+                                            }[];
+                                            /** @default [] */
+                                            prompts: {
+                                                promptId: string;
+                                                /** @enum {string} */
+                                                status: "running" | "queued" | "blocked" | "completed" | "failed" | "aborted";
+                                                userMessageId?: string;
+                                                content?: unknown;
+                                                createdAt: string;
+                                                finishedAt?: string;
+                                                steeredAt?: string;
+                                            }[];
+                                            meta: {
+                                                goal?: {
+                                                    objective: string;
+                                                    /** @enum {string} */
+                                                    status: "active" | "paused" | "blocked" | "complete";
+                                                    completionCriterion?: string;
+                                                    budgetUsed?: number;
+                                                    budgetLimit?: number;
+                                                };
+                                                modes?: {
+                                                    plan?: {
+                                                        reviewPath?: string;
+                                                        version?: number;
+                                                    };
+                                                    swarm?: {
+                                                        trigger?: string;
+                                                    };
+                                                };
+                                                /** @enum {string} */
+                                                activity?: "idle" | "turn" | "disposing" | "unknown";
+                                                agent?: {
+                                                    model?: string;
+                                                    thinkingEffort?: string;
+                                                    usage?: {
+                                                        byModel?: {
+                                                            [key: string]: {
+                                                                inputOther: number;
+                                                                output: number;
+                                                                inputCacheRead: number;
+                                                                inputCacheCreation: number;
+                                                            };
+                                                        };
+                                                        currentTurn?: {
+                                                            inputOther: number;
+                                                            output: number;
+                                                            inputCacheRead: number;
+                                                            inputCacheCreation: number;
+                                                        };
+                                                        total?: {
+                                                            inputOther: number;
+                                                            output: number;
+                                                            inputCacheRead: number;
+                                                            inputCacheCreation: number;
+                                                        };
+                                                    };
+                                                    contextTokens?: number;
+                                                    maxContextTokens?: number;
+                                                    contextUsage?: number;
+                                                    /** @enum {string} */
+                                                    permission?: "manual" | "yolo" | "auto";
+                                                    phase?: {
+                                                        /** @enum {string} */
+                                                        kind: "idle";
+                                                    } | {
+                                                        /** @enum {string} */
+                                                        kind: "running";
+                                                        turnId: number;
+                                                        step: number;
+                                                        stepId: string;
+                                                        since: number;
+                                                    } | {
+                                                        /** @enum {string} */
+                                                        kind: "streaming";
+                                                        turnId: number;
+                                                        step: number;
+                                                        stepId: string;
+                                                        /** @enum {string} */
+                                                        stream: "assistant" | "thinking" | "tool_call";
+                                                        toolCallId?: string;
+                                                        toolName?: string;
+                                                        since: number;
+                                                    } | {
+                                                        /** @enum {string} */
+                                                        kind: "tool_call";
+                                                        turnId: number;
+                                                        step: number;
+                                                        toolCallId: string;
+                                                        name: string;
+                                                        since: number;
+                                                    } | {
+                                                        /** @enum {string} */
+                                                        kind: "retrying";
+                                                        turnId: number;
+                                                        step: number;
+                                                        stepId: string;
+                                                        failedAttempt: number;
+                                                        nextAttempt: number;
+                                                        maxAttempts: number;
+                                                        delayMs: number;
+                                                        errorName?: string;
+                                                        statusCode?: number;
+                                                        since: number;
+                                                    } | {
+                                                        /** @enum {string} */
+                                                        kind: "awaiting_approval";
+                                                        turnId: number;
+                                                        step?: number;
+                                                        approval?: unknown;
+                                                        since: number;
+                                                    } | {
+                                                        /** @enum {string} */
+                                                        kind: "interrupted";
+                                                        turnId: number;
+                                                        step?: number;
+                                                        /** @enum {string} */
+                                                        reason: "aborted" | "max_steps" | "error";
+                                                        message?: string;
+                                                        at: number;
+                                                    } | {
+                                                        /** @enum {string} */
+                                                        kind: "ended";
+                                                        turnId: number;
+                                                        /** @enum {string} */
+                                                        reason: "completed" | "cancelled" | "failed" | "blocked";
+                                                        durationMs?: number;
+                                                        at: number;
+                                                    };
+                                                };
+                                            };
+                                            hasMoreOlder?: boolean;
+                                        };
+                                    } | {
+                                        /** @enum {string} */
+                                        op: "turn.upsert";
+                                        turn: {
+                                            /** @enum {string} */
+                                            kind: "turn";
+                                            turnId: string;
+                                            ordinal: number;
+                                            /** @enum {string} */
+                                            state: "queued" | "running" | "completed" | "failed" | "cancelled";
+                                            origin: {
+                                                /** @enum {string} */
+                                                kind: "user";
+                                                payload?: unknown;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind: "cron";
+                                                taskId?: string;
+                                                payload?: unknown;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind: "task";
+                                                taskId: string;
+                                                payload?: unknown;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind: "hook";
+                                                payload?: unknown;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind: "compaction";
+                                                payload?: unknown;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind: "side";
+                                                payload?: unknown;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind: "other";
+                                                payload?: unknown;
+                                            };
+                                            prompt?: string;
+                                            attachmentIds?: string[];
+                                            startedAt?: string;
+                                            endedAt?: string;
+                                            usage?: {
+                                                inputTokens?: number;
+                                                outputTokens?: number;
+                                                cachedTokens?: number;
+                                                cost?: number;
+                                            };
+                                            durationMs?: number;
+                                            error?: string;
+                                        };
+                                    } | {
+                                        /** @enum {string} */
+                                        op: "step.upsert";
+                                        turnId: string;
+                                        step: {
+                                            /** @enum {string} */
+                                            kind: "step";
+                                            stepId: string;
+                                            turnId: string;
+                                            ordinal: number;
+                                            /** @enum {string} */
+                                            state: "running" | "completed" | "interrupted" | "failed";
+                                            startedAt?: string;
+                                            endedAt?: string;
+                                            usage?: {
+                                                inputOther: number;
+                                                output: number;
+                                                inputCacheRead: number;
+                                                inputCacheCreation: number;
+                                            };
+                                            finishReason?: string;
+                                            timing?: {
+                                                llmFirstTokenLatencyMs?: number;
+                                                llmStreamDurationMs?: number;
+                                                llmRequestBuildMs?: number;
+                                                llmServerFirstTokenMs?: number;
+                                                llmServerDecodeMs?: number;
+                                                llmClientConsumeMs?: number;
+                                            };
+                                            retry?: {
+                                                failedAttempt: number;
+                                                nextAttempt: number;
+                                                maxAttempts: number;
+                                                delayMs: number;
+                                                errorName: string;
+                                                errorMessage: string;
+                                                statusCode?: number;
+                                            };
+                                            endReason?: string;
+                                            endMessage?: string;
+                                        };
+                                    } | {
+                                        /** @enum {string} */
+                                        op: "frame.upsert";
+                                        turnId: string;
+                                        stepId: string;
+                                        frame: {
+                                            /** @enum {string} */
+                                            kind: "text";
+                                            frameId: string;
+                                            /** @enum {string} */
+                                            role: "assistant" | "user";
+                                            text: string;
+                                            attachmentIds?: string[];
+                                            taskId?: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "thinking";
+                                            frameId: string;
+                                            text: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "tool";
+                                            frameId: string;
+                                            toolCallId: string;
+                                            name: string;
+                                            view?: string;
+                                            /** @enum {string} */
+                                            state: "running" | "done" | "error";
+                                            input?: unknown;
+                                            output?: unknown;
+                                            display?: unknown;
+                                            error?: string;
+                                            inputText?: string;
+                                            progress?: {
+                                                /** @enum {string} */
+                                                kind: "stdout" | "stderr" | "progress" | "status" | "custom";
+                                                text?: string;
+                                                percent?: number;
+                                                customKind?: string;
+                                                customData?: unknown;
+                                            };
+                                            taskId?: string;
+                                            approvalId?: string;
+                                            todoId?: string;
+                                            agentRefs?: {
+                                                agentId: string;
+                                                /** @enum {string} */
+                                                role?: "child" | "member";
+                                            }[];
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "notice";
+                                            frameId: string;
+                                            /** @enum {string} */
+                                            level: "error" | "warning" | "info";
+                                            source?: string;
+                                            message: string;
+                                            detail?: unknown;
+                                        };
+                                    } | {
+                                        /** @enum {string} */
+                                        op: "append";
+                                        target: {
+                                            /** @enum {string} */
+                                            type: "frame";
+                                            turnId: string;
+                                            stepId: string;
+                                            frameId: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            type: "task";
+                                            taskId: string;
+                                        };
+                                        offset: number;
+                                        text: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        op: "marker.upsert";
+                                        item: {
+                                            /** @enum {string} */
+                                            kind: "marker";
+                                            markerId: string;
+                                            marker: string;
+                                            payload?: unknown;
+                                            at?: string;
+                                        };
+                                        beforeTurn?: number;
+                                    } | {
+                                        /** @enum {string} */
+                                        op: "taskref.upsert";
+                                        item: {
+                                            /** @enum {string} */
+                                            kind: "taskref";
+                                            refId: string;
+                                            taskId: string;
+                                            at?: string;
+                                        };
+                                        beforeTurn?: number;
+                                    } | {
+                                        /** @enum {string} */
+                                        op: "task.upsert";
+                                        task: {
+                                            taskId: string;
+                                            /** @enum {string} */
+                                            kind: "shell" | "subagent" | "tool" | "other";
+                                            /** @enum {string} */
+                                            state: "running" | "completed" | "failed" | "timed_out" | "killed" | "lost";
+                                            detached: boolean;
+                                            description?: string;
+                                            agentId?: string;
+                                            outputTail: string;
+                                            startedAt?: string;
+                                            endedAt?: string;
+                                            resultSummary?: string;
+                                            error?: string;
+                                            stateReason?: string;
+                                            usage?: {
+                                                inputOther: number;
+                                                output: number;
+                                                inputCacheRead: number;
+                                                inputCacheCreation: number;
+                                            };
+                                        };
+                                    } | {
+                                        /** @enum {string} */
+                                        op: "interaction.upsert";
+                                        interaction: {
+                                            interactionId: string;
+                                            /** @enum {string} */
+                                            interactionKind: "approval" | "question";
+                                            toolCallId?: string;
+                                            /** @enum {string} */
+                                            state: "pending" | "approved" | "rejected" | "cancelled" | "answered" | "dismissed";
+                                            request?: unknown;
+                                            response?: unknown;
+                                        };
+                                    } | {
+                                        /** @enum {string} */
+                                        op: "attachment.upsert";
+                                        attachment: {
+                                            attachmentId: string;
+                                            mediaType: string;
+                                            name?: string;
+                                            size?: number;
+                                            source?: {
+                                                /** @enum {string} */
+                                                kind: "url";
+                                                url: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind: "file";
+                                                fileId: string;
+                                            };
+                                            placeholder?: string;
+                                        };
+                                    } | {
+                                        /** @enum {string} */
+                                        op: "todo.upsert";
+                                        todo: {
+                                            todoId: string;
+                                            items: {
+                                                title: string;
+                                                /** @enum {string} */
+                                                status: "pending" | "in_progress" | "done";
+                                            }[];
+                                            updatedAt?: string;
+                                        };
+                                    } | {
+                                        /** @enum {string} */
+                                        op: "prompt.upsert";
+                                        prompt: {
+                                            promptId: string;
+                                            /** @enum {string} */
+                                            status: "running" | "queued" | "blocked" | "completed" | "failed" | "aborted";
+                                            userMessageId?: string;
+                                            content?: unknown;
+                                            createdAt: string;
+                                            finishedAt?: string;
+                                            steeredAt?: string;
+                                        };
+                                    } | {
+                                        /** @enum {string} */
+                                        op: "meta.merge";
+                                        meta: {
+                                            goal?: {
+                                                objective: string;
+                                                /** @enum {string} */
+                                                status: "active" | "paused" | "blocked" | "complete";
+                                                completionCriterion?: string;
+                                                budgetUsed?: number;
+                                                budgetLimit?: number;
+                                            };
+                                            modes?: {
+                                                plan?: {
+                                                    reviewPath?: string;
+                                                    version?: number;
+                                                } | null;
+                                                swarm?: {
+                                                    trigger?: string;
+                                                } | null;
+                                            };
+                                            /** @enum {string} */
+                                            activity?: "idle" | "turn" | "disposing" | "unknown";
+                                            agent?: {
+                                                model?: string;
+                                                thinkingEffort?: string;
+                                                usage?: {
+                                                    byModel?: {
+                                                        [key: string]: {
+                                                            inputOther: number;
+                                                            output: number;
+                                                            inputCacheRead: number;
+                                                            inputCacheCreation: number;
+                                                        };
+                                                    };
+                                                    currentTurn?: {
+                                                        inputOther: number;
+                                                        output: number;
+                                                        inputCacheRead: number;
+                                                        inputCacheCreation: number;
+                                                    };
+                                                    total?: {
+                                                        inputOther: number;
+                                                        output: number;
+                                                        inputCacheRead: number;
+                                                        inputCacheCreation: number;
+                                                    };
+                                                };
+                                                contextTokens?: number;
+                                                maxContextTokens?: number;
+                                                contextUsage?: number;
+                                                /** @enum {string} */
+                                                permission?: "manual" | "yolo" | "auto";
+                                                phase?: {
+                                                    /** @enum {string} */
+                                                    kind: "idle";
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind: "running";
+                                                    turnId: number;
+                                                    step: number;
+                                                    stepId: string;
+                                                    since: number;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind: "streaming";
+                                                    turnId: number;
+                                                    step: number;
+                                                    stepId: string;
+                                                    /** @enum {string} */
+                                                    stream: "assistant" | "thinking" | "tool_call";
+                                                    toolCallId?: string;
+                                                    toolName?: string;
+                                                    since: number;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind: "tool_call";
+                                                    turnId: number;
+                                                    step: number;
+                                                    toolCallId: string;
+                                                    name: string;
+                                                    since: number;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind: "retrying";
+                                                    turnId: number;
+                                                    step: number;
+                                                    stepId: string;
+                                                    failedAttempt: number;
+                                                    nextAttempt: number;
+                                                    maxAttempts: number;
+                                                    delayMs: number;
+                                                    errorName?: string;
+                                                    statusCode?: number;
+                                                    since: number;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind: "awaiting_approval";
+                                                    turnId: number;
+                                                    step?: number;
+                                                    approval?: unknown;
+                                                    since: number;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind: "interrupted";
+                                                    turnId: number;
+                                                    step?: number;
+                                                    /** @enum {string} */
+                                                    reason: "aborted" | "max_steps" | "error";
+                                                    message?: string;
+                                                    at: number;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind: "ended";
+                                                    turnId: number;
+                                                    /** @enum {string} */
+                                                    reason: "completed" | "cancelled" | "failed" | "blocked";
+                                                    durationMs?: number;
+                                                    at: number;
+                                                };
+                                            };
+                                        };
+                                    } | {
+                                        /** @enum {string} */
+                                        op: "items.remove";
+                                        ids: string[];
+                                    })[];
+                                }[];
+                                latest_seq: number;
+                                complete: boolean;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        } | {
+                            /** @enum {number} */
+                            code: 40401;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/transcript/user-messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description All turn-opening inputs ("user messages") of a session, grouped per agent: every turn with a defined prompt (real user text, user-slash skill/plugin commands, cron prompts — distinguish via origin). agent_id optional: present reads one agent, absent reads every rostered agent. Live sessions answer from the in-memory store (history backfill awaited per agent), cold sessions rebuild from the persisted wire records. Unpaginated; attachment entities referenced by the messages ride along (metadata only) */
+        get: {
+            parameters: {
+                query?: {
+                    agent_id?: string;
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                agents: {
+                                    agent_id: string;
+                                    messages: {
+                                        turn_id: string;
+                                        ordinal: number;
+                                        /** @enum {string} */
+                                        state: "queued" | "running" | "completed" | "failed" | "cancelled";
+                                        origin: {
+                                            /** @enum {string} */
+                                            kind: "user";
+                                            payload?: unknown;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "cron";
+                                            taskId?: string;
+                                            payload?: unknown;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "task";
+                                            taskId: string;
+                                            payload?: unknown;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "hook";
+                                            payload?: unknown;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "compaction";
+                                            payload?: unknown;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "side";
+                                            payload?: unknown;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "other";
+                                            payload?: unknown;
+                                        };
+                                        prompt: string;
+                                        attachment_ids?: string[];
+                                        started_at?: string;
+                                    }[];
+                                    /** @default [] */
+                                    attachments: {
+                                        attachmentId: string;
+                                        mediaType: string;
+                                        name?: string;
+                                        size?: number;
+                                        source?: {
+                                            /** @enum {string} */
+                                            kind: "url";
+                                            url: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "file";
+                                            fileId: string;
+                                        };
+                                        placeholder?: string;
+                                    }[];
+                                }[];
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        } | {
+                            /** @enum {number} */
+                            code: 40401;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/transcript/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Plan information of an agent's ExitPlanMode tool calls: the reviewed plan content, plan file path, offered options, and the review outcome, in timeline order. agent_id required; tool_call_id optional — present narrows the read to that one call (unknown id or non-ExitPlanMode call → 40416), absent lists every call with recoverable plan content. Content is projected from the linked approval interaction (interactive reviews, live or cold), the live tool frame display (auto mode), or the tool result output text (cold rebuilds without an interaction). Live sessions read the in-memory store (history backfill awaited), cold sessions rebuild the agent from the persisted wire records */
+        get: {
+            parameters: {
+                query: {
+                    agent_id: string;
+                    tool_call_id?: string;
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                agent_id: string;
+                                plans: {
+                                    tool_call_id: string;
+                                    turn_id: string;
+                                    /** @enum {string} */
+                                    source: "interaction" | "display" | "output";
+                                    plan: string;
+                                    path?: string;
+                                    options?: {
+                                        label: string;
+                                        description?: string;
+                                    }[];
+                                    review?: {
+                                        /** @enum {string} */
+                                        state: "pending" | "approved" | "rejected" | "cancelled";
+                                        selected_option?: string;
+                                        feedback?: string;
+                                    };
+                                }[];
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        } | {
+                            /** @enum {number} */
+                            code: 40401;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40416;
                             msg: string;
                             /** @enum {string|null} */
                             data: null;
@@ -4895,7 +6227,234 @@ export interface operations {
             };
         };
     };
-    refreshProviderModels: {
+    createProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: string;
+                    /** @enum {string} */
+                    type: "kimi" | "openai" | "openai_responses" | "anthropic" | "google-genai" | "vertexai";
+                    api_key?: string;
+                    base_url?: string;
+                    default_model?: string;
+                    models: {
+                        model: string;
+                        max_context_size: number;
+                        display_name?: string;
+                        capabilities?: string[];
+                        max_output_size?: number;
+                        support_efforts?: string[];
+                        adaptive_thinking?: boolean;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {number} */
+                        code: 0;
+                        msg: string;
+                        data: {
+                            id: string;
+                            type: string;
+                            base_url?: string;
+                            default_model?: string;
+                            has_api_key: boolean;
+                            /** @enum {string} */
+                            status: "connected" | "error" | "unconfigured";
+                            models?: string[];
+                        };
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40001;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40921;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    };
+                };
+            };
+        };
+    };
+    replaceProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    new_id?: string;
+                    /** @enum {string} */
+                    type: "kimi" | "openai" | "openai_responses" | "anthropic" | "google-genai" | "vertexai";
+                    api_key?: string;
+                    base_url?: string;
+                    default_model?: string;
+                    models: {
+                        model: string;
+                        max_context_size: number;
+                        display_name?: string;
+                        capabilities?: string[];
+                        max_output_size?: number;
+                        support_efforts?: string[];
+                        adaptive_thinking?: boolean;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {number} */
+                        code: 0;
+                        msg: string;
+                        data: {
+                            provider: {
+                                id: string;
+                                type: string;
+                                base_url?: string;
+                                default_model?: string;
+                                has_api_key: boolean;
+                                /** @enum {string} */
+                                status: "connected" | "error" | "unconfigured";
+                                models?: string[];
+                            };
+                        };
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40001;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40003;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40412;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40921;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    };
+                };
+            };
+        };
+    };
+    deleteProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {number} */
+                        code: 0;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40001;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40003;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40412;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    };
+                };
+            };
+            /** @description Provider deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    providerCollectionAction: {
         parameters: {
             query?: never;
             header?: never;
@@ -4904,7 +6463,17 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    catalog_id?: string;
+                    api_key?: string;
+                    base_url?: string;
+                    id?: string;
+                    url?: string;
+                };
+            };
+        };
         responses: {
             /** @description Default Response */
             200: {
@@ -4928,12 +6497,76 @@ export interface operations {
                                 provider: string;
                                 reason: string;
                             }[];
+                        } | {
+                            provider: {
+                                id: string;
+                                type: string;
+                                base_url?: string;
+                                default_model?: string;
+                                has_api_key: boolean;
+                                /** @enum {string} */
+                                status: "connected" | "error" | "unconfigured";
+                                models?: string[];
+                            };
+                            models_imported: number;
+                        } | {
+                            providers: {
+                                id: string;
+                                type: string;
+                                base_url?: string;
+                                default_model?: string;
+                                has_api_key: boolean;
+                                /** @enum {string} */
+                                status: "connected" | "error" | "unconfigured";
+                                models?: string[];
+                            }[];
+                            models_imported: number;
                         };
                         request_id: string;
                         details?: unknown;
                     } | {
                         /** @enum {number} */
                         code: 40001;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40003;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40004;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40005;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40417;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 50004;
                         msg: string;
                         /** @enum {string|null} */
                         data: null;
@@ -4991,6 +6624,122 @@ export interface operations {
                     } | {
                         /** @enum {number} */
                         code: 40412;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    };
+                };
+            };
+        };
+    };
+    listCatalogProviders: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {number} */
+                        code: 0;
+                        msg: string;
+                        data: {
+                            items: {
+                                id: string;
+                                name: string;
+                                /** @enum {string|null} */
+                                wire_type: "kimi" | "openai" | "openai_responses" | "anthropic" | "google-genai" | "vertexai" | null;
+                                guessed: boolean;
+                                needs_base_url: boolean;
+                                rejected: boolean;
+                                reject_reason: string | null;
+                                env_key: string | null;
+                                models: {
+                                    id: string;
+                                    name?: string;
+                                    max_context_size: number;
+                                    capabilities?: string[];
+                                    reasoning: boolean;
+                                }[];
+                            }[];
+                        };
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 50004;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    };
+                };
+            };
+        };
+    };
+    getCatalogProvider: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                catalog_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {number} */
+                        code: 0;
+                        msg: string;
+                        data: {
+                            id: string;
+                            name: string;
+                            /** @enum {string|null} */
+                            wire_type: "kimi" | "openai" | "openai_responses" | "anthropic" | "google-genai" | "vertexai" | null;
+                            guessed: boolean;
+                            needs_base_url: boolean;
+                            rejected: boolean;
+                            reject_reason: string | null;
+                            env_key: string | null;
+                            models: {
+                                id: string;
+                                name?: string;
+                                max_context_size: number;
+                                capabilities?: string[];
+                                reasoning: boolean;
+                            }[];
+                        };
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40417;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 50004;
                         msg: string;
                         /** @enum {string|null} */
                         data: null;
@@ -5289,6 +7038,7 @@ export interface operations {
                                         /** @enum {string} */
                                         kind: "url";
                                         url: string;
+                                        id?: string;
                                     } | {
                                         /** @enum {string} */
                                         kind: "base64";
@@ -5306,6 +7056,7 @@ export interface operations {
                                         /** @enum {string} */
                                         kind: "url";
                                         url: string;
+                                        id?: string;
                                     } | {
                                         /** @enum {string} */
                                         kind: "base64";
@@ -5359,6 +7110,7 @@ export interface operations {
                                         /** @enum {string} */
                                         kind: "url";
                                         url: string;
+                                        id?: string;
                                     } | {
                                         /** @enum {string} */
                                         kind: "base64";
@@ -5376,6 +7128,7 @@ export interface operations {
                                         /** @enum {string} */
                                         kind: "url";
                                         url: string;
+                                        id?: string;
                                     } | {
                                         /** @enum {string} */
                                         kind: "base64";
@@ -5452,6 +7205,7 @@ export interface operations {
                             /** @enum {string} */
                             kind: "url";
                             url: string;
+                            id?: string;
                         } | {
                             /** @enum {string} */
                             kind: "base64";
@@ -5469,6 +7223,7 @@ export interface operations {
                             /** @enum {string} */
                             kind: "url";
                             url: string;
+                            id?: string;
                         } | {
                             /** @enum {string} */
                             kind: "base64";
@@ -5496,6 +7251,7 @@ export interface operations {
                         [key: string]: unknown;
                     };
                     agent_id?: string;
+                    profile?: string;
                     model?: string;
                     thinking?: string;
                     /** @enum {string} */
@@ -5505,6 +7261,7 @@ export interface operations {
                     goal_objective?: string;
                     /** @enum {string} */
                     goal_control?: "pause" | "resume" | "cancel";
+                    disabled_tools?: string[];
                 };
             };
         };
@@ -5547,6 +7304,7 @@ export interface operations {
                                     /** @enum {string} */
                                     kind: "url";
                                     url: string;
+                                    id?: string;
                                 } | {
                                     /** @enum {string} */
                                     kind: "base64";
@@ -5564,6 +7322,7 @@ export interface operations {
                                     /** @enum {string} */
                                     kind: "url";
                                     url: string;
+                                    id?: string;
                                 } | {
                                     /** @enum {string} */
                                     kind: "base64";
@@ -5644,14 +7403,6 @@ export interface operations {
                     } | {
                         /** @enum {number} */
                         code: 40401;
-                        msg: string;
-                        /** @enum {string|null} */
-                        data: null;
-                        request_id: string;
-                        details?: unknown;
-                    } | {
-                        /** @enum {number} */
-                        code: 40901;
                         msg: string;
                         /** @enum {string|null} */
                         data: null;
@@ -5870,6 +7621,37 @@ export interface operations {
                         request_id: string;
                         details?: unknown;
                     };
+                };
+            };
+        };
+    };
+    fsContent: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+            /** @description Default Response */
+            206: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
                 };
             };
         };

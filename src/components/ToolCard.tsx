@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import DiffViewer from 'react-diff-viewer-continued'
 import type { SubagentRecord, ToolCallRecord } from '../api/events'
+import { getConnectionInfo } from '../api/connection'
 import { openExternal } from '../api/openPath'
 
 function fmtArgs(args: unknown): string {
@@ -56,6 +57,109 @@ function extractResultVideos(output: unknown): string[] {
     }
   }
   return paths
+}
+
+const VIDEO_MIME: Record<string, string> = {
+  webm: 'video/webm',
+  mp4: 'video/mp4',
+  m4v: 'video/mp4',
+  mov: 'video/quicktime',
+  mkv: 'video/x-matroska',
+  avi: 'video/x-msvideo',
+  ogv: 'video/ogg',
+}
+/** Don't pull files bigger than this into the webview — fall back to the
+ *  external-player link instead. */
+const VIDEO_CAP = 25 * 1024 * 1024
+
+/** path → blob URL promise (null = unavailable: endpoint missing on old
+ *  daemons, file gone, or over the cap). Cached forever — history videos
+ *  don't change, and revoking would break re-renders. */
+const videoUrlCache = new Map<string, Promise<string | null>>()
+
+function fetchVideoUrl(path: string): Promise<string | null> {
+  let p = videoUrlCache.get(path)
+  if (p) return p
+  p = (async () => {
+    try {
+      const conn = await getConnectionInfo()
+      const url = `${conn.baseUrl}/api/v1/fs:content?path=${encodeURIComponent(path)}`
+      const auth = { Authorization: `Bearer ${conn.token}` }
+      // Size probe: 1-byte range → Content-Range carries the total. Daemons
+      // before fs:content (≤0.28) answer 404 here → null → chip fallback.
+      const probe = await fetch(url, { headers: { ...auth, Range: 'bytes=0-0' } })
+      if (probe.status === 206) {
+        const total = Number((probe.headers.get('content-range') ?? '').split('/')[1])
+        await probe.arrayBuffer()
+        if (Number.isFinite(total) && total > VIDEO_CAP) return null
+      } else {
+        const len = Number(probe.headers.get('content-length') ?? 0)
+        await probe.body?.cancel().catch(() => {})
+        if (!probe.ok) return null
+        if (len > VIDEO_CAP) return null
+      }
+      const res = await fetch(url, { headers: auth })
+      if (!res.ok) return null
+      const buf = await res.arrayBuffer()
+      if (buf.byteLength > VIDEO_CAP) return null
+      const ext = path.split('.').pop()?.toLowerCase() ?? ''
+      return URL.createObjectURL(new Blob([buf], { type: VIDEO_MIME[ext] ?? 'video/mp4' }))
+    } catch {
+      return null
+    }
+  })()
+  videoUrlCache.set(path, p)
+  return p
+}
+
+/** Inline player for a video result: filename link on top (opens the default
+ *  player), <video> below fed by a blob URL from fs:content. The fetch only
+ *  starts when the card scrolls near the viewport. Falls back to the bare
+ *  chip+link when the file can't be streamed. */
+function InlineVideo({ path }: { path: string }) {
+  const name = path.split(/[\\/]/).pop() ?? path
+  const [phase, setPhase] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle')
+  const [src, setSrc] = useState<string | null>(null)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          io.disconnect()
+          setPhase('loading')
+          void fetchVideoUrl(path).then((u) => {
+            setSrc(u)
+            setPhase(u ? 'ready' : 'failed')
+          })
+        }
+      },
+      { rootMargin: '300px' },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [path])
+  return (
+    <div ref={ref} className="flex flex-col gap-1">
+      <div className="flex items-center gap-2">
+        {phase === 'failed' && (
+          <span className="rounded bg-zinc-700 px-1.5 py-0.5 text-[11px] text-zinc-300">🎬</span>
+        )}
+        <button
+          onClick={() => void openExternal(path)}
+          title={`${path} — open in default player`}
+          className="max-w-72 truncate text-left font-mono text-[11px] text-sky-400/90 underline decoration-zinc-600 underline-offset-2 hover:text-sky-300"
+        >
+          {name}
+        </button>
+      </div>
+      {phase === 'loading' && <div className="h-36 w-64 animate-pulse rounded-md bg-zinc-800/60" />}
+      {phase === 'ready' && src && (
+        <video src={src} controls preload="metadata" className="max-h-64 rounded-md border border-zinc-700" />
+      )}
+    </div>
+  )
 }
 
 const ICONS: Record<string, string> = {
@@ -299,24 +403,10 @@ export function ToolCard({
         </div>
       )}
       {resultVideos.length > 0 && (
-        <div className="flex flex-wrap gap-2 border-t border-zinc-800/60 px-3 py-2">
-          {resultVideos.map((path, i) => {
-            const name = path.split(/[\\/]/).pop() ?? path
-            return (
-              <div key={i} className="flex items-center gap-2">
-                <span className="rounded bg-zinc-700 px-1.5 py-0.5 text-[11px] text-zinc-300">
-                  🎬
-                </span>
-                <button
-                  onClick={() => void openExternal(path)}
-                  title={`${path} — open in default player`}
-                  className="max-w-72 truncate text-left font-mono text-[11px] text-sky-400/90 underline decoration-zinc-600 underline-offset-2 hover:text-sky-300"
-                >
-                  {name}
-                </button>
-              </div>
-            )
-          })}
+        <div className="flex flex-wrap gap-3 border-t border-zinc-800/60 px-3 py-2">
+          {resultVideos.map((path, i) => (
+            <InlineVideo key={i} path={path} />
+          ))}
         </div>
       )}
       {body}
