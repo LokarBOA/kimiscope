@@ -47,6 +47,7 @@ To set up KimiScope on a new Windows machine, an agent can do everything with th
 - Build: `npm run tauri build` → MSI + portable exe in `src-tauri/target/release/bundle/`.
 - Types: `npm run gen:api` after a kimi upgrade (re-snapshot `reference/*.json` first).
 - Tests: `npm test` (vitest). The store reducer is the regression-prone core — `src/state/store.test.ts` pins streaming, per-agent separation, usage accumulation, spliced merging, snapshot guards, outbox. Add cases there whenever touching `applyFrame`/`applySnapshot`. Reducer logic deliberately lives in the store (pure, testable) rather than in `sync.ts` (module-level singleton: socket/watchers/polling).
+- Troubleshooting "connecting + Failed to fetch forever" with a HEALTHY daemon (verified 2026-07-29 on a fresh VM): if curl/Invoke-WebRequest reach the daemon but every webview fetch fails, it's WebView2's own state, not the daemon — auth (401), CORS (preflight 204s), proxy, and firewall all present differently. Fix: quit the app, rename the WebView2 profile (`%LOCALAPPDATA%\KimiScope\edge-agent-profile`), relaunch; a full OS restart clears it too. The daemon version stamp in the top bar only changes after the *daemon* restarts — `npm i -g` never touches a running daemon.
 - Probes: `node scripts/probe-*.mjs` — live protocol probes against the daemon (each creates a throwaway session).
 
 ## Gotchas
