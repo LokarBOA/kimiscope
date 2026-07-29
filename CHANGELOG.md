@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.1.10
+
+### Fixed
+
+- **Stale dev token no longer ships inside the installer** — `public/dev-token.json` (the browser-dev credential helper) was copied verbatim into the production bundle, so on any machine where the Rust connection handshake failed, the app silently fell back to the bundled token and port and then showed `Failed to fetch` / `connecting` forever instead of the real error. The token file now lives at the project root and is served by vite in dev only; the fallback branch is stripped from production builds.
+- **Boot retries the daemon handshake** — on a cold machine (fresh boot, slow VM) spawning `kimi web` can outlast one warm-up wait; boot now tries up to 3 times with pauses before giving up, and the "Could not reach the kimi server" screen gains a **Retry** button (no more app restart needed).
+
 ## v0.1.9
 
 ### Added

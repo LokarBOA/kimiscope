@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useApp } from './state/store'
-import { initApp, watchSession } from './state/sync'
+import { initApp, retryInit, watchSession } from './state/sync'
 import { SessionList } from './components/SessionList'
 import { ChatView } from './components/ChatView'
 import { Composer } from './components/Composer'
@@ -140,8 +140,16 @@ export default function App() {
             Could not reach the kimi server
           </div>
           <div className="text-[13px] whitespace-pre-wrap text-zinc-400">{initError}</div>
-          <div className="mt-3 text-xs text-zinc-600">
-            Make sure `kimi` is on PATH and try again.
+          <div className="mt-3 flex items-center justify-between">
+            <span className="text-xs text-zinc-600">
+              Make sure `kimi` is on PATH and try again.
+            </span>
+            <button
+              onClick={() => retryInit()}
+              className="rounded border border-zinc-700 px-2.5 py-1 text-xs text-zinc-300 hover:bg-zinc-800"
+            >
+              Retry
+            </button>
           </div>
         </div>
       </div>

@@ -28,15 +28,33 @@ interface Meta {
 
 let booted = false
 
+/** Re-run boot after an init failure (the Retry button on the error screen). */
+export function retryInit(): void {
+  useApp.getState().setInitError(null)
+  booted = false
+  void initApp()
+}
+
 /** Boot: connection info, server meta, workspace/session lists, shared socket. */
 export async function initApp(): Promise<void> {
   if (booted) return // StrictMode double-invokes effects in dev
   booted = true
-  const conn = await getConnectionInfo().catch((e: unknown) => {
-    useApp.getState().setInitError(String(e instanceof Error ? e.message : e))
-    return null
-  })
-  if (!conn) return
+  // Retry with pauses: on a cold machine (fresh boot, slow VM) the daemon
+  // spawn can outlast the Rust side's warm-up wait, and a later attempt's
+  // discovery finds the server the first attempt spawned.
+  let conn: Awaited<ReturnType<typeof getConnectionInfo>> | null = null
+  let lastErr: unknown = null
+  for (let attempt = 0; attempt < 3 && !conn; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 3000))
+    conn = await getConnectionInfo(true).catch((e: unknown) => {
+      lastErr = e
+      return null
+    })
+  }
+  if (!conn) {
+    useApp.getState().setInitError(String(lastErr instanceof Error ? lastErr.message : lastErr))
+    return
+  }
   useApp.getState().setConnection(conn)
 
   get<Meta>('/meta')

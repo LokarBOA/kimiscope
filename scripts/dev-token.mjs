@@ -1,8 +1,9 @@
-// Writes public/dev-token.json so the frontend can run in a plain browser
-// (Playwright, drive-by DOM checks) without Tauri IPC. Dev-only; the file is
-// gitignored and served by vite on localhost only. Requires the daemon to be
-// running (the app auto-starts it, or `kimi web`).
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+// Writes .dev-token.json (project root) so the frontend can run in a plain
+// browser (Playwright, drive-by DOM checks) without Tauri IPC. Dev-only: the
+// file is gitignored and vite serves it at /dev-token.json in dev only — it
+// is never bundled. Requires the daemon to be running (the app auto-starts
+// it, or `kimi web`).
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import net from 'node:net'
@@ -45,9 +46,8 @@ async function discoverPort() {
 
 const port = await discoverPort()
 
-mkdirSync('public', { recursive: true })
 writeFileSync(
-  join('public', 'dev-token.json'),
+  '.dev-token.json',
   JSON.stringify({
     baseUrl: `http://127.0.0.1:${port}`,
     wsUrl: `ws://127.0.0.1:${port}/api/v1/ws`,
@@ -56,4 +56,4 @@ writeFileSync(
     spawned: false,
   }),
 )
-console.log(`wrote public/dev-token.json (port ${port}) — gitignored, do not commit`)
+console.log(`wrote .dev-token.json (port ${port}) — gitignored, do not commit`)

@@ -23,10 +23,13 @@ dist-ssr
 *.sln
 *.sw?
 .server-token.tmp
+.dev-token.json
 public/dev-token.json
 .playwright-mcp/
 src-tauri/target/
 .scratch-kimi28/
+.scratch-kimi29/
+.scratch-kimi30/
 
 # LokarBoA gh token drop (user-provided, never commit)
 .lokarboa-token
