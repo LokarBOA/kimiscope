@@ -3,6 +3,8 @@ export interface MenuEntry {
   label: string
   description?: string
   hint?: string
+  /** Optional secondary affordance rendered as a small button on the row's right. */
+  altLabel?: string
 }
 
 export interface MenuSection {
@@ -20,12 +22,14 @@ export function CommandMenu({
   total,
   onPick,
   onHover,
+  onAlt,
 }: {
   sections: MenuSection[]
   highlight: number
   total: number
   onPick: (index: number) => void
   onHover: (index: number) => void
+  onAlt?: (index: number) => void
 }) {
   return (
     <div className="absolute right-3 bottom-full left-3 z-20 mb-2 max-h-80 overflow-y-auto rounded-lg border border-zinc-700 bg-zinc-900 py-1 shadow-xl shadow-black/50">
@@ -48,6 +52,18 @@ export function CommandMenu({
                 <span className="shrink-0 font-mono text-sky-300">{e.label}</span>
                 {e.hint && <span className="shrink-0 text-[11px] text-zinc-600">{e.hint}</span>}
                 <span className="min-w-0 flex-1 truncate text-zinc-500">{e.description}</span>
+                {e.altLabel && onAlt && (
+                  <span
+                    role="button"
+                    onClick={(ev) => {
+                      ev.stopPropagation()
+                      onAlt(idx)
+                    }}
+                    className="shrink-0 rounded border border-zinc-700 px-1 text-[10px] text-zinc-500 hover:border-sky-700 hover:text-sky-300"
+                  >
+                    {e.altLabel}
+                  </span>
+                )}
               </button>
             )
           })}

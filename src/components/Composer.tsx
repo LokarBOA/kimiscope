@@ -91,15 +91,18 @@ export function Composer({ sessionId }: { sessionId: string }) {
     return () => clearTimeout(t)
   }, [atQuery, cwd])
 
+  function relPath(p: string): string {
+    if (cwd && p.toLowerCase().startsWith(cwd.toLowerCase().replace(/\\/g, '/'))) {
+      return p.slice(cwd.replace(/\\/g, '/').length).replace(/^[\\/]+/, '')
+    }
+    return p
+  }
+
   function insertFile(hit: FileHit) {
     const el = taRef.current
     if (!el || !atQuery) return
     const caret = el.selectionStart
-    // Prefer a cwd-relative path — shorter, matches TUI @-reference style.
-    let p = hit.path
-    if (cwd && p.toLowerCase().startsWith(cwd.toLowerCase().replace(/\\/g, '/'))) {
-      p = p.slice(cwd.replace(/\\/g, '/').length).replace(/^[\\/]+/, '')
-    }
+    const p = relPath(hit.path)
     const next = `${text.slice(0, atQuery.start)}@${p} ${text.slice(caret)}`
     updateDraft({ text: next })
     setAtQuery(null)
@@ -108,6 +111,21 @@ export function Composer({ sessionId }: { sessionId: string }) {
       const pos = atQuery.start + p.length + 2
       el.focus()
       el.setSelectionRange(pos, pos)
+    })
+  }
+
+  /** Tab on a directory: narrow the fragment to that dir and search inside it. */
+  function drillDir(hit: FileHit) {
+    const el = taRef.current
+    if (!el || !atQuery || hit.kind !== 'directory') return
+    const p = relPath(hit.path)
+    const next = `${text.slice(0, atQuery.start)}@${p}/`
+    updateDraft({ text: next })
+    setAtQuery({ start: atQuery.start, query: `${p}/` })
+    setHighlight(0)
+    requestAnimationFrame(() => {
+      el.focus()
+      el.setSelectionRange(next.length, next.length)
     })
   }
 
@@ -208,12 +226,13 @@ export function Composer({ sessionId }: { sessionId: string }) {
         flat.push({
           key: `file:${h.path}`,
           label: h.name,
-          hint: h.kind === 'directory' ? 'dir' : 'file',
+          hint: h.kind === 'directory' ? '→ dir' : 'file',
           description: h.path,
-          action: () => insertFile(h),
+          altLabel: h.kind === 'directory' ? 'link' : undefined,
+          action: () => (h.kind === 'directory' ? drillDir(h) : insertFile(h)),
         })
       }
-      sections.push({ title: 'Files — @ to reference', entries: flat, start: 0 })
+      sections.push({ title: 'Files — dirs open · files insert · ⇧/link links a dir', entries: flat, start: 0 })
     } else if (modelPicker === 'model') {
       for (const m of models) {
         flat.push({
@@ -288,6 +307,10 @@ export function Composer({ sessionId }: { sessionId: string }) {
           total={flat.length}
           onPick={(i) => flat[i]?.action()}
           onHover={setHighlight}
+          onAlt={(i) => {
+            const h = atMenuOpen ? atResults[i] : undefined
+            if (h) insertFile(h)
+          }}
         />
       )}
       {images.length > 0 && (
@@ -336,6 +359,12 @@ export function Composer({ sessionId }: { sessionId: string }) {
                 e.preventDefault()
                 const n = Math.max(flat.length, 1)
                 setHighlight((h) => (h + (e.key === 'ArrowDown' ? 1 : -1) + n) % n)
+                return
+              }
+              if (e.key === 'Enter' && e.shiftKey && atMenuOpen) {
+                e.preventDefault()
+                const h = atResults[hi]
+                if (h?.kind === 'directory') insertFile(h)
                 return
               }
               if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') {

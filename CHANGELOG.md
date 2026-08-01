@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **`@` picker: directory drill-down + dir linking** — directory rows in the file picker now open in place (click/Enter/Tab narrows the search into that folder, shell-completion style), and a `link` button (or Shift+Enter) inserts the directory path itself as the reference instead of drilling.
+
+### Fixed
+
+- **Restart daemon button always visible in Settings** — it used to render only with an MCP change pending, hiding exactly when you needed it (e.g. to pick up a freshly installed kimi-code version).
+
 ## v0.1.11
 
 ### Added
