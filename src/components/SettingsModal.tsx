@@ -161,15 +161,16 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             ) : (
               <span>Changes apply to new sessions; daemon restart applies everywhere.</span>
             )}
-            {(dirty || stale) && (
-              <button
-                onClick={() => void restart()}
-                disabled={restarting}
-                className="ml-auto rounded bg-amber-700 px-2 py-1 text-[11px] text-white hover:bg-amber-600 disabled:opacity-50"
-              >
-                {restarting ? 'Restarting…' : 'Restart daemon'}
-              </button>
-            )}
+            <button
+              onClick={() => void restart()}
+              disabled={restarting}
+              title="Kill and respawn the kimi daemon — also picks up a newly installed kimi-code version"
+              className={`ml-auto rounded px-2 py-1 text-[11px] text-white disabled:opacity-50 ${
+                dirty || stale ? 'bg-amber-700 hover:bg-amber-600' : 'bg-zinc-700 hover:bg-zinc-600'
+              }`}
+            >
+              {restarting ? 'Restarting…' : 'Restart daemon'}
+            </button>
           </div>
         </div>
 
