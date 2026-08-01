@@ -4,7 +4,6 @@ import { get } from '../api/client'
 
 interface AccountInfo {
   nickname: string
-  email?: string
   userLevelName: string
   region: string
 }
@@ -113,7 +112,6 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         {account && (
           <div className="mb-4 flex items-center gap-2 rounded-md border border-zinc-800 px-3 py-2 text-[13px]">
             <span className="text-zinc-200">{account.nickname}</span>
-            {account.email && <span className="min-w-0 flex-1 truncate text-zinc-500">{account.email}</span>}
             <span className="ml-auto rounded bg-zinc-800 px-1.5 py-px text-[10px] text-zinc-400">
               {account.userLevelName}
             </span>

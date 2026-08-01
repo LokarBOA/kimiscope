@@ -7,7 +7,7 @@
 - **Workspace trust controls (kimi 0.31+)** — daemon-created workspaces start untrusted on 0.31+, which silently disables their project-level `mcp.json`. New sessions opened through the app are now trusted up front, and untrusted projects show a 🔒 in the sidebar that grants trust in one click (auto-detected; daemons ≤0.30 see nothing).
 - **`@` file references in the composer (kimi 0.31+)** — typing `@` opens a file picker over the project's files (`workspace/fs:search`, debounced, latest-wins): arrows navigate, Enter/Tab inserts a workspace-relative `@path`, Esc closes. The daemon's own file-search backs it, so gitignore is respected. Older daemons probe once and stay quiet.
 - **Plan-mode cards (kimi 0.29+)** — ExitPlanMode calls now render the real plan record from `transcript/plan`: review outcome badge (approved/rejected/auto), the offered options with the chosen one marked, feedback, and the plan content itself behind a show/hide toggle.
-- **Account line in Settings (kimi 0.31+)** — the managed account profile from `oauth/userinfo` (nickname, email, plan tier) at the top of the Settings modal.
+- **Account line in Settings (kimi 0.31+)** — the managed account profile from `oauth/userinfo` (nickname and plan tier — deliberately no email, so screenshots of the app can't leak it).
 
 ### Fixed
 
