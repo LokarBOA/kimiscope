@@ -66,18 +66,28 @@ export function Composer({ sessionId }: { sessionId: string }) {
   const [atResults, setAtResults] = useState<FileHit[]>([])
   const atSeq = useRef(0)
 
-  // Debounced search; latest-wins via the seq counter.
+  // Debounced search; latest-wins via the seq counter. The fragment splits into
+  // a dir scope (up to the last '/') and a name query — the daemon matches on
+  // names, not path prefixes, so scoping goes through include_globs.
   useEffect(() => {
     if (!atQuery || !cwd || fsSearchSupported === false) {
       setAtResults([])
+      return
+    }
+    const slash = atQuery.query.lastIndexOf('/')
+    const scope = slash >= 0 ? atQuery.query.slice(0, slash + 1) : ''
+    const name = slash >= 0 ? atQuery.query.slice(slash + 1) : atQuery.query
+    if (!name) {
+      setAtResults([]) // just drilled — show the "keep typing" state
       return
     }
     const seq = ++atSeq.current
     const t = setTimeout(() => {
       post<{ items?: FileHit[] }>('/workspace/fs:search', {
         workspace: cwd,
-        query: atQuery.query || '',
+        query: name,
         limit: 10,
+        ...(scope ? { include_globs: [`${scope.replace(/\/$/, '')}/**`] } : {}),
       })
         .then((res) => {
           fsSearchSupported = true
@@ -216,23 +226,35 @@ export function Composer({ sessionId }: { sessionId: string }) {
 
   // ---- Menu view model ----
   const nameFilter = slashNameFilter(text)
-  const atMenuOpen = atQuery !== null && atResults.length > 0
+  const atDrilled = atQuery !== null && atQuery.query.endsWith('/')
+  const atMenuOpen = atQuery !== null && (atResults.length > 0 || atDrilled)
   const menuOpen = !dismissed && (atMenuOpen || modelPicker !== null || nameFilter !== null)
   const sections: MenuSection[] = []
   const flat: FlatEntry[] = []
   if (menuOpen) {
     if (atMenuOpen) {
-      for (const h of atResults) {
+      if (atDrilled && atResults.length === 0) {
         flat.push({
-          key: `file:${h.path}`,
-          label: h.name,
-          hint: h.kind === 'directory' ? '→ dir' : 'file',
-          description: h.path,
-          altLabel: h.kind === 'directory' ? 'link' : undefined,
-          action: () => (h.kind === 'directory' ? drillDir(h) : insertFile(h)),
+          key: 'at:drilled',
+          label: atQuery!.query,
+          hint: '→ dir',
+          description: 'keep typing to filter inside…',
+          action: () => {},
         })
+        sections.push({ title: `Files — inside ${atQuery!.query}`, entries: flat, start: 0 })
+      } else {
+        for (const h of atResults) {
+          flat.push({
+            key: `file:${h.path}`,
+            label: h.name,
+            hint: h.kind === 'directory' ? '→ dir' : 'file',
+            description: h.path,
+            altLabel: h.kind === 'directory' ? 'link' : undefined,
+            action: () => (h.kind === 'directory' ? drillDir(h) : insertFile(h)),
+          })
+        }
+        sections.push({ title: 'Files — dirs open · files insert · ⇧/link links a dir', entries: flat, start: 0 })
       }
-      sections.push({ title: 'Files — dirs open · files insert · ⇧/link links a dir', entries: flat, start: 0 })
     } else if (modelPicker === 'model') {
       for (const m of models) {
         flat.push({
