@@ -818,21 +818,56 @@ export async function abortQueuedAndRefresh(sessionId: string, promptId: string)
   useApp.getState().setQueue(sessionId, q)
 }
 
-/** Abort the active turn (REST works for any active prompt; WS is the fallback). */
+/** Abort the active turn AND drain the queue behind it. Stop means stop — if a
+ *  queued prompt auto-started after every Stop, the button would look broken
+ *  (exactly the report that prompted this). Cleared queue rows get a notice so
+ *  the drain is discoverable, not silent. */
 export async function abortActive(sessionId: string): Promise<boolean> {
   try {
     const q = await getPromptQueue(sessionId)
+    const queued = q.queued ?? []
+    const drainQueue = async () => {
+      for (const p of queued) await abortPrompt(sessionId, p.prompt_id).catch(() => {})
+      const fresh = await getPromptQueue(sessionId).catch(() => null)
+      if (fresh) useApp.getState().setQueue(sessionId, fresh)
+    }
     if (q.active) {
       await abortPrompt(sessionId, q.active.prompt_id)
+      await drainQueue()
+      if (queued.length) {
+        useApp.getState().setNotice(`stopped — cleared ${queued.length} queued prompt${queued.length > 1 ? 's' : ''}`)
+      }
+      return true
+    }
+    if (queued.length) {
+      await drainQueue()
+      useApp.getState().setNotice(`cleared ${queued.length} queued prompt${queued.length > 1 ? 's' : ''}`)
       return true
     }
   } catch {
     // fall through to WS
   }
   const promptId = lastPromptIds.get(sessionId)
-  if (!promptId || !socket) return false
-  socket.send('abort', { session_id: sessionId, prompt_id: promptId })
-  return true
+  if (promptId && socket) {
+    socket.send('abort', { session_id: sessionId, prompt_id: promptId })
+    return true
+  }
+  // Last handle: the newest user message carrying a daemon id IS the active
+  // prompt's id — present in history/splices even when the queue record was
+  // lost (daemon restart) or the prompt came from another client.
+  const msgs = useApp.getState().sessionState[sessionId]?.messages ?? []
+  const lastUser = [...msgs].reverse().find((m) => m.role === 'user' && m.id.startsWith('msg_'))
+  if (lastUser) {
+    try {
+      await abortPrompt(sessionId, lastUser.id)
+      return true
+    } catch {
+      // already finished — nothing left to stop
+    }
+  }
+  // No handle anywhere — say so, with the escape hatch one click away.
+  useApp.getState().setNotice('could not stop the turn — restart the daemon from Settings ⚙')
+  return false
 }
 
 /** Create a daemon-owned session (streamable), set its profile, and open it. */

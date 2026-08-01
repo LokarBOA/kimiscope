@@ -424,7 +424,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
             </button>
             <button
               onClick={() => void abortActive(sessionId)}
-              title="Stop the active turn (Esc also works); your message stays for Send"
+              title="Stop the turn and clear the queue (Esc also works); your message stays for Send"
               className="rounded-md bg-red-700/80 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-600"
             >
               ■ Stop
@@ -445,7 +445,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
           <span className="text-amber-400/90">{notice}</span>
         ) : (
           <>
-            Enter sends (queues if busy) · Steer lands at next step · ■ Stop or Esc aborts · / for
+            Enter sends (queues if busy) · Steer lands at next step · ■ Stop or Esc aborts turn+queue · / for
             commands · @ for files
           </>
         )}

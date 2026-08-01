@@ -8,7 +8,7 @@
 
 ### Fixed
 
-- **Restart daemon button always visible in Settings** — it used to render only with an MCP change pending, hiding exactly when you needed it (e.g. to pick up a freshly installed kimi-code version).
+- **Stop now stops everything, and always has a handle** — ■ Stop / Esc now (1) aborts the active turn AND drains the queue behind it (a queued message auto-starting made the button look dead), (2) falls back to the WS handle for app-sent prompts, and (3) as a last resort aborts by the newest user message's daemon id — which survives daemon-restart queue loss and prompts sent by other clients. If every handle fails, the app says so ("could not stop the turn — restart the daemon from Settings ⚙") instead of failing silently; a runaway agent should never outlast the button. **Restart daemon button always visible in Settings** — it used to render only with an MCP change pending, hiding exactly when you needed it (e.g. to pick up a freshly installed kimi-code version).
 
 ## v0.1.11
 
