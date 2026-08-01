@@ -143,6 +143,25 @@ export async function refreshWorkspaces(): Promise<void> {
 
 /** null = untested; 404 on first probe = daemon without trust (≤0.30) — never probe again. */
 let trustSupported: boolean | null = null
+/** null = untested; 404 on first probe = daemon without /transcript/plan (≤0.28). */
+let planSupported: boolean | null = null
+
+/** 0.29+ only: pull ExitPlanMode plan records into session state (keyed by
+ *  tool_call_id). Older daemons 404 once and are never re-probed. */
+export async function pullPlans(sessionId: string): Promise<void> {
+  if (planSupported === false) return
+  try {
+    const res = await get<{ plans?: import('./store').PlanRecord[] }>(
+      `/sessions/${sessionId}/transcript/plan?agent_id=main`,
+    )
+    planSupported = true
+    const map: Record<string, import('./store').PlanRecord> = {}
+    for (const p of res.plans ?? []) map[p.tool_call_id] = p
+    useApp.getState().setPlans(sessionId, map)
+  } catch {
+    if (planSupported === null) planSupported = false
+  }
+}
 
 /** 0.31+ only: daemon-created workspaces start untrusted, which disables their
  *  project-level mcp.json. Probe each workspace's trust state once per refresh;
@@ -545,7 +564,10 @@ async function pullHistory(sessionId: string): Promise<void> {
   const source = useApp.getState().sessionState[sessionId]?.historySource
   if (source === 'transcript') {
     // Same id space — a fresh transcript page cleanly replaces the old one.
-    if (await pullTranscript(sessionId)) return
+    if (await pullTranscript(sessionId)) {
+      void pullPlans(sessionId)
+      return
+    }
   }
   try {
     const res = await get<{ items: Snapshot['messages']['items']; has_more?: boolean }>(
@@ -575,6 +597,7 @@ async function pullTranscript(sessionId: string, beforeTurn?: string): Promise<b
     } else {
       useApp.getState().setMessages(sessionId, messages, Boolean(res.has_more))
       useApp.getState().setHistorySource(sessionId, 'transcript')
+      void pullPlans(sessionId)
     }
     return true
   } catch (e) {

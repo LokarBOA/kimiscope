@@ -57,6 +57,21 @@ export interface OutboxItem {
   steerFallback?: boolean
 }
 
+/** One ExitPlanMode call's recoverable plan record (kimi 0.29+ /transcript/plan). */
+export interface PlanRecord {
+  tool_call_id: string
+  turn_id: string
+  source: 'interaction' | 'display' | 'output'
+  plan: string
+  path?: string
+  options?: { label: string; description?: string }[]
+  review?: {
+    state: 'pending' | 'approved' | 'rejected' | 'cancelled'
+    selected_option?: string
+    feedback?: string
+  }
+}
+
 export interface SessionState {
   summary: SessionSummary | null
   messages: ChatMessage[]
@@ -79,6 +94,8 @@ export interface SessionState {
   goal: GoalState | null
   queue: PromptQueue | null
   outbox: OutboxItem[]
+  /** ExitPlanMode plan records by tool_call_id (0.29+; empty on older daemons). */
+  plans: Record<string, PlanRecord>
   hasMore: boolean
   /** Where history comes from: 'daemon' (/messages projection) or 'transcript'
    *  (0.28+ wire-derived pages, used for cold CLI-era sessions). */
@@ -115,6 +132,7 @@ const emptySession = (): SessionState => ({
   goal: null,
   queue: null,
   outbox: [],
+  plans: {},
   hasMore: false,
   historySource: 'daemon',
   skills: [],
@@ -236,6 +254,7 @@ interface AppState {
   ) => void
   mergeUsage: (id: string, u: SessionUsage) => void
   setQueue: (id: string, q: PromptQueue | null) => void
+  setPlans: (id: string, plans: Record<string, PlanRecord>) => void
   addToOutbox: (id: string, item: OutboxItem) => void
   clearOutbox: (id: string, localId?: string) => void
   setSkills: (id: string, skills: SkillInfo[]) => void
@@ -507,6 +526,14 @@ export const useApp = create<AppState>((set) => ({
       sessionState: {
         ...st.sessionState,
         [id]: { ...(st.sessionState[id] ?? emptySession()), queue: q },
+      },
+    })),
+
+  setPlans: (id, plans) =>
+    set((st) => ({
+      sessionState: {
+        ...st.sessionState,
+        [id]: { ...(st.sessionState[id] ?? emptySession()), plans },
       },
     })),
 

@@ -23,10 +23,12 @@ function MessageView({
   msg,
   toolCalls,
   subagents,
+  plans,
 }: {
   msg: ChatMessage
   toolCalls: Record<string, ToolCallRecord>
   subagents: Record<string, SubagentRecord>
+  plans: Record<string, import('../state/store').PlanRecord>
 }) {
   const [copied, setCopied] = useState(false)
   if (msg.role === 'tool') return null // results render inside their tool card
@@ -64,7 +66,7 @@ function MessageView({
         args: tu.input,
         status: 'running' as const,
       }
-      return [<ToolCard key={tu.tool_call_id} call={rec} subagents={subagents} allCalls={toolCalls} />]
+      return [<ToolCard key={tu.tool_call_id} call={rec} subagents={subagents} allCalls={toolCalls} plan={plans[tu.tool_call_id]} />]
     }
     return []
   })
@@ -225,7 +227,7 @@ export function ChatView({ sessionId }: { sessionId: string }) {
           </div>
         )}
         {s.messages.map((m) => (
-          <MessageView key={m.id} msg={m} toolCalls={s.toolCalls} subagents={s.subagents} />
+          <MessageView key={m.id} msg={m} toolCalls={s.toolCalls} subagents={s.subagents} plans={s.plans} />
         ))}
 
         {s.streaming.active && (

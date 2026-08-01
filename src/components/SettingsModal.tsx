@@ -1,5 +1,26 @@
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { get } from '../api/client'
+
+interface AccountInfo {
+  nickname: string
+  email?: string
+  userLevelName: string
+  region: string
+}
+
+/** kimi 0.31+ managed account profile; absent on older daemons (404 → null). */
+async function fetchAccount(): Promise<AccountInfo | null> {
+  try {
+    const res = await get<
+      | { kind: 'ok'; userInfo: AccountInfo }
+      | { kind: 'error'; message: string }
+    >('/oauth/userinfo')
+    return res.kind === 'ok' ? res.userInfo : null
+  } catch {
+    return null
+  }
+}
 
 interface McpEntry {
   command?: string
@@ -34,6 +55,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [permMode, setPermMode] = useState(
     () => localStorage.getItem('kimiscope.permissionMode') ?? 'yolo',
   )
+  const [account, setAccount] = useState<AccountInfo | null>(null)
 
   async function load() {
     const j = await invoke<{ mcpServers?: Record<string, McpEntry> }>('get_mcp_servers').catch(
@@ -42,6 +64,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     setServers(j?.mcpServers ?? {})
     const meta = await invoke<{ stale: boolean }>('get_mcp_meta').catch(() => null)
     setStale(meta?.stale ?? false)
+    setAccount(await fetchAccount())
   }
   useEffect(() => {
     void load()
@@ -86,6 +109,16 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             ✕
           </button>
         </div>
+
+        {account && (
+          <div className="mb-4 flex items-center gap-2 rounded-md border border-zinc-800 px-3 py-2 text-[13px]">
+            <span className="text-zinc-200">{account.nickname}</span>
+            {account.email && <span className="min-w-0 flex-1 truncate text-zinc-500">{account.email}</span>}
+            <span className="ml-auto rounded bg-zinc-800 px-1.5 py-px text-[10px] text-zinc-400">
+              {account.userLevelName}
+            </span>
+          </div>
+        )}
 
         <div className="mb-4">
           <div className="mb-1.5 text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">

@@ -3,6 +3,7 @@ import DiffViewer from 'react-diff-viewer-continued'
 import type { SubagentRecord, ToolCallRecord } from '../api/events'
 import { getConnectionInfo } from '../api/connection'
 import { openExternal } from '../api/openPath'
+import { Markdown } from './Markdown'
 
 function fmtArgs(args: unknown): string {
   if (args == null) return ''
@@ -258,16 +259,80 @@ function SubagentPanel({
   )
 }
 
+/** ExitPlanMode with a recoverable plan record (0.29+): plan content,
+ *  offered options (selected highlighted), and the review outcome. */
+function PlanBody({ plan }: { plan: import('../state/store').PlanRecord }) {
+  const [showPlan, setShowPlan] = useState(false)
+  const review = plan.review
+  const badge =
+    review?.state === 'approved'
+      ? { text: 'approved', cls: 'bg-emerald-900/60 text-emerald-300' }
+      : review?.state === 'rejected'
+        ? { text: 'rejected', cls: 'bg-red-950/60 text-red-300' }
+        : review?.state === 'cancelled'
+          ? { text: 'cancelled', cls: 'bg-zinc-800 text-zinc-400' }
+          : { text: 'auto', cls: 'bg-sky-950/60 text-sky-300' }
+  return (
+    <div className="space-y-2 border-t border-zinc-800 px-3 py-2 text-[12.5px]">
+      <div className="flex items-center gap-2">
+        <span className={`rounded px-1.5 py-px text-[10px] font-medium ${badge.cls}`}>{badge.text}</span>
+        {review?.feedback && (
+          <span className="min-w-0 flex-1 truncate text-zinc-500" title={review.feedback}>
+            “{review.feedback}”
+          </span>
+        )}
+        <button
+          onClick={() => setShowPlan((v) => !v)}
+          className="ml-auto shrink-0 rounded px-1.5 py-0.5 text-[11px] text-sky-400/90 hover:bg-zinc-800"
+        >
+          {showPlan ? 'hide plan' : 'show plan'}
+        </button>
+      </div>
+      {plan.options && plan.options.length > 0 && (
+        <div className="space-y-1">
+          {plan.options.map((o, i) => {
+            const chosen = review?.selected_option === o.label
+            return (
+              <div
+                key={i}
+                className={`rounded border px-2 py-1 ${
+                  chosen ? 'border-emerald-800 bg-emerald-950/30' : 'border-zinc-800'
+                }`}
+              >
+                <span className="text-zinc-300">
+                  {chosen && <span className="mr-1 text-emerald-400">✓</span>}
+                  {o.label}
+                </span>
+                {o.description && <div className="text-[11px] text-zinc-500">{o.description}</div>}
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {showPlan && (
+        <div className="rounded bg-zinc-900 p-2 text-zinc-300">
+          <Markdown>{plan.plan}</Markdown>
+        </div>
+      )}
+      {plan.path && (
+        <div className="font-mono text-[11px] text-zinc-600">{plan.path}</div>
+      )}
+    </div>
+  )
+}
+
 export function ToolCard({
   call,
   live = false,
   subagents = {},
   allCalls = {},
+  plan,
 }: {
   call: ToolCallRecord
   live?: boolean
   subagents?: Record<string, SubagentRecord>
   allCalls?: Record<string, ToolCallRecord>
+  plan?: import('../state/store').PlanRecord
 }) {
   const [open, setOpen] = useState(false)
   const [fullImage, setFullImage] = useState<number | null>(null)
@@ -298,7 +363,9 @@ export function ToolCard({
 
   let body: ReactNode = null
   if (open) {
-    if (isBash) {
+    if (plan) {
+      body = <PlanBody plan={plan} />
+    } else if (isBash) {
       body = (
         <div className="border-t border-zinc-800 bg-black/40 px-3 py-2 font-mono text-[12.5px]">
           {cmd && (

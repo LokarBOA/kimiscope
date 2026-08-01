@@ -3,6 +3,7 @@ import { abortActive, runSlashCommand, sendPrompt } from '../state/sync'
 import { useApp, type ComposerDraft, type DraftImage } from '../state/store'
 import { filterCommands, slashNameFilter, THINKING_LEVELS } from '../state/commands'
 import type { SkillInfo } from '../api/events'
+import { post } from '../api/client'
 import { CommandMenu, type MenuEntry, type MenuSection } from './CommandMenu'
 
 const NO_SKILLS: SkillInfo[] = []
@@ -10,6 +11,26 @@ const NO_IMAGES: DraftImage[] = []
 
 interface FlatEntry extends MenuEntry {
   action: () => void
+}
+
+interface FileHit {
+  path: string
+  name: string
+  kind: 'file' | 'directory' | 'symlink'
+}
+
+/** null = untested; false = daemon without /workspace/fs:search (≤0.30). */
+let fsSearchSupported: boolean | null = null
+
+/** The `@fragment` at the caret, if the caret is inside/at the end of one. */
+function atFragment(text: string, caret: number): { start: number; query: string } | null {
+  const head = text.slice(0, caret)
+  const at = head.lastIndexOf('@')
+  if (at < 0) return null
+  if (at > 0 && !/\s/.test(head[at - 1])) return null // must start a word
+  const query = head.slice(at + 1)
+  if (/[\s]/.test(query)) return null // fragment ended before the caret
+  return { start: at, query }
 }
 
 export function Composer({ sessionId }: { sessionId: string }) {
@@ -25,6 +46,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
   const [highlight, setHighlight] = useState(0)
   const [modelPicker, setModelPicker] = useState<'model' | 'thinking' | null>(null)
   const busy = useApp((st) => st.sessionState[sessionId]?.mainTurnActive ?? false)
+  const cwd = useApp((st) => st.sessionState[sessionId]?.summary?.metadata?.cwd ?? null)
   const skills = useApp((st) => st.sessionState[sessionId]?.skills)
   const models = useApp((st) => st.models)
   const notice = useApp((st) => st.notice)
@@ -38,6 +60,56 @@ export function Composer({ sessionId }: { sessionId: string }) {
     },
     [sessionId, setDraft],
   )
+
+  // ---- @ file picker (kimi 0.31+ workspace/fs:search) ----
+  const [atQuery, setAtQuery] = useState<{ start: number; query: string } | null>(null)
+  const [atResults, setAtResults] = useState<FileHit[]>([])
+  const atSeq = useRef(0)
+
+  // Debounced search; latest-wins via the seq counter.
+  useEffect(() => {
+    if (!atQuery || !cwd || fsSearchSupported === false) {
+      setAtResults([])
+      return
+    }
+    const seq = ++atSeq.current
+    const t = setTimeout(() => {
+      post<{ items?: FileHit[] }>('/workspace/fs:search', {
+        workspace: cwd,
+        query: atQuery.query || '',
+        limit: 10,
+      })
+        .then((res) => {
+          fsSearchSupported = true
+          if (seq === atSeq.current) setAtResults(res.items ?? [])
+        })
+        .catch(() => {
+          if (fsSearchSupported === null) fsSearchSupported = false
+          if (seq === atSeq.current) setAtResults([])
+        })
+    }, 200)
+    return () => clearTimeout(t)
+  }, [atQuery, cwd])
+
+  function insertFile(hit: FileHit) {
+    const el = taRef.current
+    if (!el || !atQuery) return
+    const caret = el.selectionStart
+    // Prefer a cwd-relative path — shorter, matches TUI @-reference style.
+    let p = hit.path
+    if (cwd && p.toLowerCase().startsWith(cwd.toLowerCase().replace(/\\/g, '/'))) {
+      p = p.slice(cwd.replace(/\\/g, '/').length).replace(/^[\\/]+/, '')
+    }
+    const next = `${text.slice(0, atQuery.start)}@${p} ${text.slice(caret)}`
+    updateDraft({ text: next })
+    setAtQuery(null)
+    setAtResults([])
+    requestAnimationFrame(() => {
+      const pos = atQuery.start + p.length + 2
+      el.focus()
+      el.setSelectionRange(pos, pos)
+    })
+  }
 
   // A restored draft may need a taller box than the single-row default.
   useEffect(() => {
@@ -126,11 +198,23 @@ export function Composer({ sessionId }: { sessionId: string }) {
 
   // ---- Menu view model ----
   const nameFilter = slashNameFilter(text)
-  const menuOpen = !dismissed && (modelPicker !== null || nameFilter !== null)
+  const atMenuOpen = atQuery !== null && atResults.length > 0
+  const menuOpen = !dismissed && (atMenuOpen || modelPicker !== null || nameFilter !== null)
   const sections: MenuSection[] = []
   const flat: FlatEntry[] = []
   if (menuOpen) {
-    if (modelPicker === 'model') {
+    if (atMenuOpen) {
+      for (const h of atResults) {
+        flat.push({
+          key: `file:${h.path}`,
+          label: h.name,
+          hint: h.kind === 'directory' ? 'dir' : 'file',
+          description: h.path,
+          action: () => insertFile(h),
+        })
+      }
+      sections.push({ title: 'Files — @ to reference', entries: flat, start: 0 })
+    } else if (modelPicker === 'model') {
       for (const m of models) {
         flat.push({
           key: `model:${m.model}`,
@@ -184,6 +268,8 @@ export function Composer({ sessionId }: { sessionId: string }) {
       if (t.startsWith('/') && (await execSlash(t))) return
       await sendPrompt(sessionId, t, mode, images)
       updateDraft({ text: '', images: [] })
+      setAtQuery(null)
+      setAtResults([])
       if (taRef.current) taRef.current.style.height = 'auto'
     } catch (e) {
       console.error('prompt failed', e)
@@ -236,6 +322,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
             setDismissed(false)
             setHighlight(0)
             if (modelPicker && e.target.value !== `/${modelPicker}`) setModelPicker(null)
+            setAtQuery(atFragment(e.target.value, e.target.selectionStart))
             const el = e.target
             el.style.height = 'auto'
             el.style.height = Math.min(el.scrollHeight, 200) + 'px'
@@ -317,7 +404,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
         ) : (
           <>
             Enter sends (queues if busy) · Steer lands at next step · ■ Stop or Esc aborts · / for
-            commands
+            commands · @ for files
           </>
         )}
       </div>
