@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Verified against kimi-code 0.31.1** — spec sweep (REST smoke + fs:content + transcript/snapshot shapes) found no breaks: 76 paths, all additions (`workspace trust`, `workspace/fs:search`, `oauth/userinfo`, `oauth/usage`, `catalog/providers`), nothing removed. Note for kimi ≥ 0.31 users: daemon-created workspaces start **untrusted**, so project-level `mcp.json` won't load until trust is granted (a trust action in-app is on the candidate list). Reference specs and generated types now track 0.31.1.
+
 ## v0.1.10
 
 ### Fixed

@@ -444,6 +444,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/oauth/userinfo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get the managed account profile */
+        get: {
+            parameters: {
+                query?: {
+                    provider?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                /** @enum {string} */
+                                kind: "ok";
+                                userInfo: {
+                                    userId: string;
+                                    nickname: string;
+                                    status: string;
+                                    region: string;
+                                    userLevel: number;
+                                    userLevelName: string;
+                                    domain: number;
+                                    domainName: string;
+                                    globalId?: string;
+                                    bio?: string;
+                                    avatar?: string;
+                                    username?: string;
+                                    email?: string;
+                                    phone?: {
+                                        countryCode: string;
+                                        number: string;
+                                    };
+                                    createdTime?: string;
+                                    lastLoginTime?: string;
+                                };
+                            } | {
+                                /** @enum {string} */
+                                kind: "error";
+                                message: string;
+                                status?: number;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/config": {
         parameters: {
             query?: never;
@@ -3391,6 +3465,155 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/v1/workspaces/{workspace_id}/trust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Read the workspace trust state */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspace_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                trusted: boolean;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40410;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** @description Mark the workspace trusted (project-level MCP config loads) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspace_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                trusted: boolean;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40410;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspace_id}/untrust": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Revoke workspace trust (project-level MCP config unloads) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspace_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                trusted: boolean;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40410;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fs:browse": {
         parameters: {
             query?: never;
@@ -3619,6 +3842,23 @@ export interface paths {
         put?: never;
         /** @description Filesystem action dispatcher. Supported actions: list, read, list_many, stat, stat_many, mkdir, search, grep, git_status, diff, open, open-in, reveal. The request and response schemas depend on the `fs:<action>` path tail and are represented as OpenAPI `oneOf` unions. */
         post: operations["fsAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/fs:search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Search files in a workspace without a session. `workspace` accepts a registered workspace id or an absolute root (registered on the spot). */
+        post: operations["workspaceFsSearch"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8241,6 +8481,83 @@ export interface operations {
                         request_id: string;
                         details?: unknown;
                         stack?: string;
+                    };
+                };
+            };
+        };
+    };
+    workspaceFsSearch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    query: string;
+                    /** @default 50 */
+                    limit?: number;
+                    include_globs?: string[];
+                    exclude_globs?: string[];
+                    /** @default true */
+                    follow_gitignore?: boolean;
+                    workspace: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {number} */
+                        code: 0;
+                        msg: string;
+                        data: {
+                            items: {
+                                path: string;
+                                name: string;
+                                /** @enum {string} */
+                                kind: "file" | "directory" | "symlink";
+                                score: number;
+                                match_positions: number[];
+                            }[];
+                            truncated: boolean;
+                        };
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40001;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: {
+                            path: string;
+                            message: string;
+                        }[] | null;
+                    } | {
+                        /** @enum {number} */
+                        code: 40410;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 41303;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
                     };
                 };
             };
