@@ -67,8 +67,9 @@ export function Composer({ sessionId }: { sessionId: string }) {
   const atSeq = useRef(0)
 
   // Debounced search; latest-wins via the seq counter. The fragment splits into
-  // a dir scope (up to the last '/') and a name query — the daemon matches on
-  // names, not path prefixes, so scoping goes through include_globs.
+  // a dir scope (up to the last '/') and a name query; the search root FOLLOWS
+  // the scope (workspace accepts any absolute root), so a bare @ lists the
+  // project root and @src/ lists src. Results are relative to the scoped root.
   useEffect(() => {
     if (!atQuery || !cwd || fsSearchSupported === false) {
       setAtResults([])
@@ -77,17 +78,13 @@ export function Composer({ sessionId }: { sessionId: string }) {
     const slash = atQuery.query.lastIndexOf('/')
     const scope = slash >= 0 ? atQuery.query.slice(0, slash + 1) : ''
     const name = slash >= 0 ? atQuery.query.slice(slash + 1) : atQuery.query
-    if (!name) {
-      setAtResults([]) // just drilled — show the "keep typing" state
-      return
-    }
+    const root = scope ? `${cwd.replace(/\\/g, '/')}/${scope}` : cwd
     const seq = ++atSeq.current
     const t = setTimeout(() => {
       post<{ items?: FileHit[] }>('/workspace/fs:search', {
-        workspace: cwd,
+        workspace: root,
         query: name,
         limit: 10,
-        ...(scope ? { include_globs: [`${scope.replace(/\/$/, '')}/**`] } : {}),
       })
         .then((res) => {
           fsSearchSupported = true
@@ -101,6 +98,11 @@ export function Composer({ sessionId }: { sessionId: string }) {
     return () => clearTimeout(t)
   }, [atQuery, cwd])
 
+  function fragScope(q: string): string {
+    const slash = q.lastIndexOf('/')
+    return slash >= 0 ? q.slice(0, slash + 1) : ''
+  }
+
   function relPath(p: string): string {
     if (cwd && p.toLowerCase().startsWith(cwd.toLowerCase().replace(/\\/g, '/'))) {
       return p.slice(cwd.replace(/\\/g, '/').length).replace(/^[\\/]+/, '')
@@ -112,7 +114,8 @@ export function Composer({ sessionId }: { sessionId: string }) {
     const el = taRef.current
     if (!el || !atQuery) return
     const caret = el.selectionStart
-    const p = relPath(hit.path)
+    // hit.path is relative to the scoped root — re-attach the scope.
+    const p = fragScope(atQuery.query) + relPath(hit.path)
     const next = `${text.slice(0, atQuery.start)}@${p} ${text.slice(caret)}`
     updateDraft({ text: next })
     setAtQuery(null)
@@ -124,11 +127,11 @@ export function Composer({ sessionId }: { sessionId: string }) {
     })
   }
 
-  /** Tab on a directory: narrow the fragment to that dir and search inside it. */
+  /** Tab/click/Enter on a directory: descend — the search root follows. */
   function drillDir(hit: FileHit) {
     const el = taRef.current
     if (!el || !atQuery || hit.kind !== 'directory') return
-    const p = relPath(hit.path)
+    const p = fragScope(atQuery.query) + relPath(hit.path)
     const next = `${text.slice(0, atQuery.start)}@${p}/`
     updateDraft({ text: next })
     setAtQuery({ start: atQuery.start, query: `${p}/` })
@@ -226,45 +229,23 @@ export function Composer({ sessionId }: { sessionId: string }) {
 
   // ---- Menu view model ----
   const nameFilter = slashNameFilter(text)
-  const atEmpty = atQuery !== null && atQuery.query === ''
-  const atDrilled = atQuery !== null && atQuery.query.endsWith('/')
-  const atMenuOpen = atQuery !== null && (atResults.length > 0 || atDrilled || atEmpty)
+  const atMenuOpen = atQuery !== null && atResults.length > 0
   const menuOpen = !dismissed && (atMenuOpen || modelPicker !== null || nameFilter !== null)
   const sections: MenuSection[] = []
   const flat: FlatEntry[] = []
   if (menuOpen) {
     if (atMenuOpen) {
-      if (atEmpty) {
+      for (const h of atResults) {
         flat.push({
-          key: 'at:empty',
-          label: '@',
-          hint: 'files',
-          description: 'type to search the project…',
-          action: () => {},
+          key: `file:${h.path}`,
+          label: h.name,
+          hint: h.kind === 'directory' ? '→ dir' : 'file',
+          description: h.path,
+          altLabel: h.kind === 'directory' ? 'link' : undefined,
+          action: () => (h.kind === 'directory' ? drillDir(h) : insertFile(h)),
         })
-        sections.push({ title: 'Files — type to search the project', entries: flat, start: 0 })
-      } else if (atDrilled && atResults.length === 0) {
-        flat.push({
-          key: 'at:drilled',
-          label: atQuery!.query,
-          hint: '→ dir',
-          description: 'keep typing to filter inside…',
-          action: () => {},
-        })
-        sections.push({ title: `Files — inside ${atQuery!.query}`, entries: flat, start: 0 })
-      } else {
-        for (const h of atResults) {
-          flat.push({
-            key: `file:${h.path}`,
-            label: h.name,
-            hint: h.kind === 'directory' ? '→ dir' : 'file',
-            description: h.path,
-            altLabel: h.kind === 'directory' ? 'link' : undefined,
-            action: () => (h.kind === 'directory' ? drillDir(h) : insertFile(h)),
-          })
-        }
-        sections.push({ title: 'Files — dirs open · files insert · ⇧/link links a dir', entries: flat, start: 0 })
       }
+      sections.push({ title: 'Files — dirs open · files insert · ⇧/link links a dir', entries: flat, start: 0 })
     } else if (modelPicker === 'model') {
       for (const m of models) {
         flat.push({

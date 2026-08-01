@@ -4,7 +4,7 @@
 
 ### Added
 
-- **`@` picker: directory drill-down + dir linking** — directory rows in the file picker now open in place (click/Enter/Tab narrows the search into that folder, shell-completion style), and a `link` button (or Shift+Enter) inserts the directory path itself as the reference instead of drilling.
+- **`@` picker: directory drill-down + dir linking** — a bare `@` lists the project root, and directories open in place (click/Enter/Tab descends; the search root follows so each level lists its contents), with a `link` button (or Shift+Enter) to insert the directory path itself as the reference instead of drilling.
 
 ### Fixed
 
