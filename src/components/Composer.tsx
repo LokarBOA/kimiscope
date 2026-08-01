@@ -226,14 +226,24 @@ export function Composer({ sessionId }: { sessionId: string }) {
 
   // ---- Menu view model ----
   const nameFilter = slashNameFilter(text)
+  const atEmpty = atQuery !== null && atQuery.query === ''
   const atDrilled = atQuery !== null && atQuery.query.endsWith('/')
-  const atMenuOpen = atQuery !== null && (atResults.length > 0 || atDrilled)
+  const atMenuOpen = atQuery !== null && (atResults.length > 0 || atDrilled || atEmpty)
   const menuOpen = !dismissed && (atMenuOpen || modelPicker !== null || nameFilter !== null)
   const sections: MenuSection[] = []
   const flat: FlatEntry[] = []
   if (menuOpen) {
     if (atMenuOpen) {
-      if (atDrilled && atResults.length === 0) {
+      if (atEmpty) {
+        flat.push({
+          key: 'at:empty',
+          label: '@',
+          hint: 'files',
+          description: 'type to search the project…',
+          action: () => {},
+        })
+        sections.push({ title: 'Files — type to search the project', entries: flat, start: 0 })
+      } else if (atDrilled && atResults.length === 0) {
         flat.push({
           key: 'at:drilled',
           label: atQuery!.query,
