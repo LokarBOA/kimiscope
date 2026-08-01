@@ -1,5 +1,4 @@
-import { post } from '../api/client'
-import { abortQueuedAndRefresh } from '../state/sync'
+import { abortQueuedAndRefresh, steerQueued } from '../state/sync'
 import { useApp } from '../state/store'
 
 const NO_OUTBOX: import('../state/store').OutboxItem[] = []
@@ -59,9 +58,7 @@ export function PendingStrip({ sessionId }: { sessionId: string }) {
             </button>
             <button
               title="Steer — the model picks it up at the next step boundary"
-              onClick={() =>
-                void post(`/sessions/${sessionId}/prompts:steer`, { prompt_ids: [q.prompt_id] })
-              }
+              onClick={() => void steerQueued(sessionId, q.prompt_id, text)}
               className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-800 hover:text-amber-400"
             >
               ⇢ steer

@@ -818,6 +818,22 @@ export async function abortQueuedAndRefresh(sessionId: string, promptId: string)
   useApp.getState().setQueue(sessionId, q)
 }
 
+/** Steer a queued prompt from the strip: mark it for injection daemon-side and
+ *  give it a steering chip so it stays visible until it lands at a step
+ *  boundary (without one the prompt vanishes from the UI while it waits). */
+export async function steerQueued(sessionId: string, promptId: string, text: string): Promise<void> {
+  const localId = `ob_${Date.now()}_${++outboxCounter}`
+  useApp.getState().addToOutbox(sessionId, { localId, text, kind: 'steer', sentAt: Date.now() })
+  try {
+    await post(`/sessions/${sessionId}/prompts:steer`, { prompt_ids: [promptId] })
+  } catch (e) {
+    useApp.getState().clearOutbox(sessionId, localId)
+    throw e
+  }
+  const q = await getPromptQueue(sessionId).catch(() => null)
+  if (q) useApp.getState().setQueue(sessionId, q)
+}
+
 /** Abort the active turn AND drain the queue behind it. Stop means stop — if a
  *  queued prompt auto-started after every Stop, the button would look broken
  *  (exactly the report that prompted this). Cleared queue rows get a notice so
