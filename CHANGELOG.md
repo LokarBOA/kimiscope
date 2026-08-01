@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Added
+
+- **Workspace trust controls (kimi 0.31+)** — daemon-created workspaces start untrusted on 0.31+, which silently disables their project-level `mcp.json`. New sessions opened through the app are now trusted up front, and untrusted projects show a 🔒 in the sidebar that grants trust in one click (auto-detected; daemons ≤0.30 see nothing).
+
+### Fixed
+
+- **Follow-scroll rewritten as a two-state anchor** — it now detaches ONLY on an explicit user scroll-up (wheel, touch, keyboard, or scrollbar drag) and re-anchors whenever the view lands at the bottom. Content changes — image decodes, media players, markdown reflow, history clamps — can no longer detach it (this was the recurring "chat popped off the bottom" bug; position-delta heuristics mistook browser scroll-anchoring adjustments for user scrolls).
+- **Steered/interrupted messages stay visible while waiting to post** — a steer the model never consumed used to vanish at turn end and only reappear when it landed next turn. Leftover chips now convert to a marked `queued…` chip that persists until the daemon queue row (or the splice) replaces them.
+
 ### Changed
 
 - **Verified against kimi-code 0.31.1** — spec sweep (REST smoke + fs:content + transcript/snapshot shapes) found no breaks: 76 paths, all additions (`workspace trust`, `workspace/fs:search`, `oauth/userinfo`, `oauth/usage`, `catalog/providers`), nothing removed. Note for kimi ≥ 0.31 users: daemon-created workspaces start **untrusted**, so project-level `mcp.json` won't load until trust is granted (a trust action in-app is on the candidate list). Reference specs and generated types now track 0.31.1.

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp, type Workspace } from '../state/store'
-import { archiveSession, newSession, refreshSessions, renameSession, runSlashCommand, watchSession } from '../state/sync'
+import { archiveSession, newSession, refreshSessions, renameSession, runSlashCommand, trustWorkspace, watchSession } from '../state/sync'
 import type { SessionSummary } from '../api/events'
 
 function timeAgo(iso: string): string {
@@ -249,6 +249,7 @@ function OpenFolder() {
 export function SessionList() {
   const sessions = useApp((st) => st.sessions)
   const workspaces = useApp((st) => st.workspaces)
+  const workspaceTrust = useApp((st) => st.workspaceTrust)
   const sessionStates = useApp((st) => st.sessionState)
   const showArchived = useApp((st) => st.showArchived)
   const setShowArchived = useApp((st) => st.setShowArchived)
@@ -319,6 +320,15 @@ export function SessionList() {
                 <span className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-wide text-zinc-500 uppercase">
                   {workspace?.name ?? id}
                 </span>
+                {workspaceTrust[id] === false && (
+                  <button
+                    onClick={() => void trustWorkspace(id)}
+                    title="Untrusted — this project's mcp.json is disabled (kimi 0.31+). Click to trust."
+                    className="shrink-0 rounded px-0.5 text-[11px] text-amber-500/90 hover:bg-zinc-800 hover:text-amber-300"
+                  >
+                    🔒
+                  </button>
+                )}
                 {busyTitles.length > 0 && (
                   <span
                     title={`Active in this project: ${busyTitles.join(', ')}`}

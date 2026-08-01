@@ -111,30 +111,53 @@ export function ChatView({ sessionId }: { sessionId: string }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const stickRef = useRef(true)
-  const lastTopRef = useRef(0)
-  const lastHeightRef = useRef(0)
+  /** Marks scroll events caused by our own pinning (distinguishes them from
+   *  user scrollbar drags — browser scroll-anchoring adjustments are neither). */
+  const progScrollRef = useRef(false)
+  /** Set while the user's pointer is down in the scrollbar gutter. */
+  const scrollbarDragRef = useRef(false)
+  const touchYRef = useRef<number | null>(null)
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [tasksOpen, setTasksOpen] = useState(false)
 
   const ready = !!s
 
-  // Follow the stream. Growth is observed on the content itself, so anything
-  // that makes it taller — text deltas, tool progress, subagent panels,
-  // markdown reflow — snaps to the bottom while the user is stuck there.
-  // Stickiness is derived only from scroll position: programmatic snaps land
-  // exactly at the bottom and never un-anchor, while scrolling up detaches and
-  // scrolling back to the bottom re-attaches.
+  // Follow-scroll, the whole story: anchored unless the USER scrolls up, and
+  // re-anchored whenever the view lands at the bottom. Content growth (text
+  // deltas, image decodes, reflow, clamps) never touches the flag — the only
+  // inputs are wheel/touch/keyboard and scrollbar drags. Programmatic snaps
+  // are marked so they can't masquerade as drags.
   useEffect(() => {
     const scrollEl = scrollRef.current
     const contentEl = contentRef.current
     if (!scrollEl || !contentEl) return
     stickRef.current = true
-    scrollEl.scrollTop = scrollEl.scrollHeight
+    const pin = () => {
+      progScrollRef.current = true
+      scrollEl.scrollTop = scrollEl.scrollHeight
+      requestAnimationFrame(() => {
+        progScrollRef.current = false
+      })
+    }
+    pin()
     const ro = new ResizeObserver(() => {
-      if (stickRef.current) scrollEl.scrollTop = scrollEl.scrollHeight
+      if (stickRef.current) pin()
     })
     ro.observe(contentEl)
-    return () => ro.disconnect()
+    const onScroll = () => {
+      if (progScrollRef.current) return // ours — not a user action
+      if (scrollbarDragRef.current) {
+        stickRef.current = false
+        return
+      }
+      const dist = scrollEl.scrollHeight - scrollEl.scrollTop - scrollEl.clientHeight
+      if (dist < 24) stickRef.current = true
+    }
+    scrollEl.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      ro.disconnect()
+      scrollEl.removeEventListener('scroll', onScroll)
+    }
   }, [sessionId, ready])
 
   if (!s) return <div className="p-6 text-zinc-500">Loading session…</div>
@@ -148,19 +171,30 @@ export function ChatView({ sessionId }: { sessionId: string }) {
   return (
     <div
       ref={scrollRef}
-      onScroll={(e) => {
+      onWheel={(e) => {
+        if (e.deltaY < 0) stickRef.current = false
+      }}
+      onTouchStart={(e) => {
+        touchYRef.current = e.touches[0]?.clientY ?? null
+      }}
+      onTouchMove={(e) => {
+        const y0 = touchYRef.current
+        const y1 = e.touches[0]?.clientY ?? y0
+        if (y0 != null && y1 != null && y1 - y0 > 4) stickRef.current = false
+      }}
+      onKeyDown={(e) => {
+        if (['PageUp', 'ArrowUp', 'Home', ' '].includes(e.key)) stickRef.current = false
+      }}
+      onPointerDown={(e) => {
         const el = e.currentTarget
-        const dist = el.scrollHeight - el.scrollTop - el.clientHeight
-        // Unstick ONLY on a genuine user scroll-up (position up while height
-        // is stable/growing — history-replacement clamps shrink height and
-        // don't count). Re-stick whenever the view lands at the bottom.
-        // Anything else — textarea growth shrinking the viewport, layout
-        // reflow — leaves the follow alone.
-        const clamping = el.scrollHeight < lastHeightRef.current - 1
-        if (!clamping && el.scrollTop < lastTopRef.current - 1) stickRef.current = false
-        else if (dist < 80) stickRef.current = true
-        lastTopRef.current = el.scrollTop
-        lastHeightRef.current = el.scrollHeight
+        // Pointer in the scrollbar gutter = grabbing the scrollbar itself.
+        if (e.clientX > el.getBoundingClientRect().right - 18) scrollbarDragRef.current = true
+      }}
+      onPointerUp={() => {
+        scrollbarDragRef.current = false
+      }}
+      onPointerCancel={() => {
+        scrollbarDragRef.current = false
       }}
       className="flex-1 overflow-y-auto px-5 py-4"
     >
@@ -175,7 +209,13 @@ export function ChatView({ sessionId }: { sessionId: string }) {
                 const prevHeight = el?.scrollHeight ?? 0
                 await loadOlder(sessionId)
                 // Keep the viewport anchored where the user was reading.
-                if (el) el.scrollTop = el.scrollHeight - prevHeight
+                if (el) {
+                  progScrollRef.current = true
+                  el.scrollTop = el.scrollHeight - prevHeight
+                  requestAnimationFrame(() => {
+                    progScrollRef.current = false
+                  })
+                }
                 setLoadingOlder(false)
               }}
               className="rounded-md bg-zinc-800 px-3 py-1 text-xs text-zinc-400 hover:bg-zinc-700 hover:text-zinc-200 disabled:opacity-50"

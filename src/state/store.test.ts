@@ -274,14 +274,21 @@ describe('outbox', () => {
     expect(useApp.getState().sessionState[SID].outbox).toHaveLength(0)
   })
 
-  it('sweeps leftover chips at main turn end (steer that never landed)', () => {
+  it('converts leftover steer chips to queued at main turn end (steer that never landed)', () => {
     const st = useApp.getState()
     st.addToOutbox(SID, { localId: 'a', text: 'hi', kind: 'steer', sentAt: 1 })
+    st.addToOutbox(SID, { localId: 'q', text: 'gone', kind: 'queue', sentAt: 1 })
     st.applyFrame(frame('turn.ended', { agentId: 'main', turnId: 1, reason: 'completed' }))
-    expect(useApp.getState().sessionState[SID].outbox).toHaveLength(0)
-    st.addToOutbox(SID, { localId: 'b', text: 'yo', kind: 'steer', sentAt: 2 })
+    const after = useApp.getState().sessionState[SID].outbox
+    expect(after).toHaveLength(1)
+    expect(after[0]).toMatchObject({ localId: 'a', text: 'hi', kind: 'queue' })
     st.applyFrame(frame('prompt.completed', { agentId: 'main' }))
-    expect(useApp.getState().sessionState[SID].outbox).toHaveLength(0)
+    expect(useApp.getState().sessionState[SID].outbox).toHaveLength(1)
+    st.clearOutbox(SID)
+    st.addToOutbox(SID, { localId: 'b', text: 'yo', kind: 'interrupt', sentAt: 2 })
+    st.applyFrame(frame('prompt.completed', { agentId: 'main' }))
+    expect(useApp.getState().sessionState[SID].outbox).toHaveLength(1)
+    expect(useApp.getState().sessionState[SID].outbox[0].kind).toBe('queue')
   })
 
   it('keeps outbox on subagent turn end', () => {

@@ -135,8 +135,45 @@ export async function refreshWorkspaces(): Promise<void> {
   try {
     const res = await get<{ items: import('./store').Workspace[] }>('/workspaces')
     useApp.getState().setWorkspaces(res.items ?? [])
+    void refreshWorkspaceTrust()
   } catch {
     // daemon hiccup
+  }
+}
+
+/** null = untested; 404 on first probe = daemon without trust (≤0.30) — never probe again. */
+let trustSupported: boolean | null = null
+
+/** 0.31+ only: daemon-created workspaces start untrusted, which disables their
+ *  project-level mcp.json. Probe each workspace's trust state once per refresh;
+ *  daemons without the trust endpoint (≤0.30) 404 once and are never re-probed. */
+export async function refreshWorkspaceTrust(): Promise<void> {
+  if (trustSupported === false) return
+  const st = useApp.getState()
+  const results: (readonly [string, boolean] | null)[] = []
+  for (const w of st.workspaces) {
+    const r = await get<{ trusted: boolean }>(`/workspaces/${w.id}/trust`)
+      .then((res) => [w.id, res.trusted] as const)
+      .catch(() => null)
+    if (!r && trustSupported === null) {
+      trustSupported = false // first probe ever 404'd — older daemon, stop here
+      return
+    }
+    trustSupported = true
+    results.push(r)
+  }
+  const map: Record<string, boolean> = {}
+  for (const r of results) if (r) map[r[0]] = r[1]
+  useApp.getState().setWorkspaceTrustAll(map)
+}
+
+/** Grant trust for one workspace (0.31+); silently ignored on older daemons. */
+export async function trustWorkspace(workspaceId: string): Promise<void> {
+  try {
+    await post(`/workspaces/${workspaceId}/trust`, {})
+    useApp.getState().setWorkspaceTrust(workspaceId, true)
+  } catch {
+    // ≤0.30 — no trust concept
   }
 }
 
@@ -788,11 +825,14 @@ export async function newSession(cwd: string): Promise<string | null> {
     if (!model) {
       throw new Error('no model configured — set default_model in kimi config first')
     }
-    const created = await post<{ id: string }>('/sessions', {
+    const created = await post<{ id: string; workspace_id?: string }>('/sessions', {
       title: 'New session',
       metadata: { cwd },
     })
     const id = created.id
+    // The user explicitly chose this folder — grant trust up front (0.31+;
+    // no-op on older daemons) so project-level mcp.json loads from the start.
+    if (created.workspace_id) void trustWorkspace(created.workspace_id)
     const profile = () =>
       post(`/sessions/${id}/profile`, {
         agent_config: {
@@ -813,7 +853,7 @@ export async function newSession(cwd: string): Promise<string | null> {
         useApp.getState().setNotice('new session has no model — pick one in the rail Session section')
       }
     }
-    await refreshSessions()
+    await Promise.all([refreshSessions(), refreshWorkspaces()])
     st.setActiveSession(id)
     void watchSession(id)
     return id

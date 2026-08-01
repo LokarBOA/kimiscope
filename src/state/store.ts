@@ -51,6 +51,10 @@ export interface OutboxItem {
   kind: 'queue' | 'steer' | 'interrupt' | 'send'
   sentAt: number
   imageCount?: number
+  /** Set when a steer/interrupt chip survived a turn end unconsumed (it falls
+   *  back to the daemon queue and lands next turn) — keeps it from being
+   *  swept as a settled queue chip at the next turn boundary. */
+  steerFallback?: boolean
 }
 
 export interface SessionState {
@@ -179,6 +183,8 @@ interface AppState {
   /** Non-fatal sync problem worth showing in the UI (e.g. subscribe failing). */
   syncIssue: string | null
   workspaces: Workspace[]
+  /** 0.31+ trust states by workspace id (absent = unprobed / older daemon). */
+  workspaceTrust: Record<string, boolean>
   sessions: SessionSummary[]
   activeSessionId: string | null
   sessionState: Record<string, SessionState>
@@ -197,6 +203,8 @@ interface AppState {
   setServerVersion: (v: string) => void
   setSyncIssue: (issue: string | null) => void
   setWorkspaces: (w: Workspace[]) => void
+  setWorkspaceTrust: (id: string, trusted: boolean) => void
+  setWorkspaceTrustAll: (map: Record<string, boolean>) => void
   setSessions: (s: SessionSummary[]) => void
   setActiveSession: (id: string | null) => void
   applySnapshot: (id: string, snap: Snapshot) => void
@@ -241,6 +249,7 @@ export const useApp = create<AppState>((set) => ({
   serverVersion: null,
   syncIssue: null,
   workspaces: [],
+  workspaceTrust: {},
   sessions: [],
   activeSessionId: null,
   sessionState: {},
@@ -256,6 +265,10 @@ export const useApp = create<AppState>((set) => ({
   setServerVersion: (serverVersion) => set({ serverVersion }),
   setSyncIssue: (syncIssue) => set({ syncIssue }),
   setWorkspaces: (workspaces) => set({ workspaces }),
+  setWorkspaceTrust: (id, trusted) =>
+    set((st) => ({ workspaceTrust: { ...st.workspaceTrust, [id]: trusted } })),
+  setWorkspaceTrustAll: (map) =>
+    set((st) => ({ workspaceTrust: { ...st.workspaceTrust, ...map } })),
   setSessions: (sessions) => set({ sessions }),
   setActiveSession: (activeSessionId) => set({ activeSessionId }),
 
@@ -843,9 +856,18 @@ export const useApp = create<AppState>((set) => ({
           if (p.reason === 'failed' && p.error) {
             next.lastError = `${(p.error as { code?: string }).code}: ${(p.error as { message?: string }).message}`
           }
-          // Any outbox chip still standing at turn end is settled: its message
-          // either landed (history pull shows it) or never will.
-          next.outbox = []
+          // Chips left standing at turn end fall into two camps: queue/send
+          // chips are settled (their message either landed or failed — drop
+          // them), but a steer/interrupt the model never consumed is NOT lost —
+          // it falls back to the daemon queue and lands next turn. Convert
+          // those to queue chips (marked steerFallback so later turn ends
+          // don't sweep them) so they stay visible until the queue row (or
+          // the eventual splice) replaces them.
+          next.outbox = next.outbox.filter((o) => o.kind === 'steer' || o.kind === 'interrupt' || o.steerFallback)
+          for (const o of next.outbox) {
+            o.kind = 'queue'
+            o.steerFallback = true
+          }
           Object.assign(next, sweepInterrupted(next))
           break
         }
@@ -854,7 +876,11 @@ export const useApp = create<AppState>((set) => ({
           next.busy = false
           next.mainTurnActive = false
           next.streaming = { ...next.streaming, active: false }
-          next.outbox = []
+          next.outbox = next.outbox.filter((o) => o.kind === 'steer' || o.kind === 'interrupt' || o.steerFallback)
+          for (const o of next.outbox) {
+            o.kind = 'queue'
+            o.steerFallback = true
+          }
           Object.assign(next, sweepInterrupted(next))
           break
         }

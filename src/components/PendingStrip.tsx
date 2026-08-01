@@ -87,7 +87,9 @@ export function PendingStrip({ sessionId }: { sessionId: string }) {
               ? 'steering (next step)…'
               : o.kind === 'interrupt'
                 ? 'interrupting…'
-                : 'sending…'}
+                : o.kind === 'queue'
+                  ? 'queued…'
+                  : 'sending…'}
           </span>
           <span className="min-w-0 flex-1 truncate text-zinc-500">
             {o.imageCount ? `🖼×${o.imageCount} ` : ''}
