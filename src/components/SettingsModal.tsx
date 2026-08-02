@@ -46,8 +46,18 @@ const PERMISSION_MODES = [
   { id: 'manual', label: 'manual — approve each tool call' },
 ]
 
+interface DaemonServer {
+  id: string
+  name: string
+  transport: string
+  status: 'connected' | 'connecting' | 'disconnected' | 'error'
+  last_error?: string
+  tool_count: number
+}
+
 export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [servers, setServers] = useState<Record<string, McpEntry> | null>(null)
+  const [daemonServers, setDaemonServers] = useState<Record<string, DaemonServer>>({})
   const [dirty, setDirty] = useState(false)
   const [restarting, setRestarting] = useState(false)
   const [stale, setStale] = useState(false)
@@ -64,6 +74,10 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     const meta = await invoke<{ stale: boolean }>('get_mcp_meta').catch(() => null)
     setStale(meta?.stale ?? false)
     setAccount(await fetchAccount())
+    const ds = await get<{ servers?: DaemonServer[] }>('/mcp/servers').catch(() => null)
+    const map: Record<string, DaemonServer> = {}
+    for (const s of ds?.servers ?? []) map[s.name] = s
+    setDaemonServers(map)
   }
   useEffect(() => {
     void load()
@@ -145,6 +159,42 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
                           power
                         </span>
                       )}
+                      {(() => {
+                        const ds = daemonServers[name]
+                        if (!ds) return null
+                        if (ds.status === 'connected') {
+                          return (
+                            <span className="rounded bg-emerald-900/50 px-1.5 text-[10px] text-emerald-300">
+                              {ds.tool_count} tools
+                            </span>
+                          )
+                        }
+                        if (ds.status === 'error' && /oauth/i.test(ds.last_error ?? '')) {
+                          return (
+                            <span
+                              className="rounded bg-amber-900/50 px-1.5 text-[10px] text-amber-300"
+                              title={`${ds.last_error}\nRun /mcp-config login ${name} in the kimi TUI, then restart the server here.`}
+                            >
+                              needs login (TUI)
+                            </span>
+                          )
+                        }
+                        if (ds.status === 'error') {
+                          return (
+                            <span
+                              className="rounded bg-red-950/60 px-1.5 text-[10px] text-red-300"
+                              title={ds.last_error}
+                            >
+                              error
+                            </span>
+                          )
+                        }
+                        return (
+                          <span className="rounded bg-zinc-800 px-1.5 text-[10px] text-zinc-400">
+                            {ds.status}
+                          </span>
+                        )
+                      })()}
                     </span>
                     {meta.hint && <span className="block text-[11px] text-zinc-500">{meta.hint}</span>}
                   </span>

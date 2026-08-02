@@ -25,6 +25,7 @@
 - **Follow-scroll rewritten as a two-state anchor** — it now detaches ONLY on an explicit user scroll-up (wheel, touch, keyboard, or scrollbar drag) and re-anchors whenever the view lands at the bottom. Content changes — image decodes, media players, markdown reflow, history clamps — can no longer detach it (this was the recurring "chat popped off the bottom" bug; position-delta heuristics mistook browser scroll-anchoring adjustments for user scrolls).
 - **Steered/interrupted messages stay visible while waiting to post** — a steer the model never consumed used to vanish at turn end and only reappear when it landed next turn. Leftover chips now convert to a marked `queued…` chip that persists until the daemon queue row (or the splice) replaces them.
 - **Restart daemon button always visible in Settings** — it used to render only with an MCP change pending, hiding exactly when you needed it (e.g. to pick up a freshly installed kimi-code version).
+- **MCP server status chips in Settings** — each server now shows its live daemon state from `GET /mcp/servers`: connected (with tool count), connecting, or error. OAuth-required servers get an amber "needs login (TUI)" badge with the exact `/mcp-config login <name>` command in the tooltip, instead of a bare error.
 
 ### Changed
 
