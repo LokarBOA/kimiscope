@@ -258,6 +258,22 @@ function handleFrame(f: Frame) {
       .catch(() => {})
     scheduleHistoryPull(f.session_id)
   }
+  // Compaction rewrites context; pull so the projected summary message lands
+  // (and renders as the ✂ divider card instead of a fake user bubble).
+  if (t === 'compaction.completed' && f.session_id) {
+    scheduleHistoryPull(f.session_id)
+  }
+  // MCP OAuth failures arrive as structured error codes (0.32+). Surface the
+  // fix path at once instead of waiting for the user to open Settings.
+  if ((f.payload as { code?: string })?.code === 'mcp.oauth_failed') {
+    const server = (f.payload as { server?: string; message?: string })?.server
+    useApp
+      .getState()
+      .setSyncIssue(
+        `MCP server ${server ?? ''} needs OAuth login — run /mcp-config login${server ? ` ${server}` : ''} in the kimi TUI, then restart the daemon from Settings ⚙`,
+      )
+    void notifyAttention('MCP server needs login')
+  }
   // Attention nudges: turn finished, or the agent needs a human.
   const isMain = ((f.payload as { agentId?: string })?.agentId ?? 'main') === 'main'
   if (isMain && t === 'prompt.completed') {
@@ -737,6 +753,17 @@ export async function archiveSession(id: string): Promise<void> {
   await refreshSessions()
 }
 
+/** Archive many sessions at once (per-project cleanup) with one list refresh. */
+export async function archiveSessions(ids: string[]): Promise<void> {
+  for (const id of ids) {
+    await post(`/sessions/${id}:archive`).catch(() => {})
+    watching.delete(id)
+    const st = useApp.getState()
+    if (st.activeSessionId === id) st.setActiveSession(null)
+  }
+  await refreshSessions()
+}
+
 /** Last prompt id per session — needed to abort app-initiated turns. */
 const lastPromptIds = new Map<string, string>()
 
@@ -820,10 +847,18 @@ export async function abortQueuedAndRefresh(sessionId: string, promptId: string)
 
 /** Steer a queued prompt from the strip: mark it for injection daemon-side and
  *  give it a steering chip so it stays visible until it lands at a step
- *  boundary (without one the prompt vanishes from the UI while it waits). */
-export async function steerQueued(sessionId: string, promptId: string, text: string): Promise<void> {
+ *  boundary (without one the prompt vanishes from the UI while it waits).
+ *  text/imageCount must be the CLEAN content (promptContentText) — the chip's
+ *  text is the splice match key, so a `[image]` display prefix would stick. */
+export async function steerQueued(sessionId: string, promptId: string, text: string, imageCount = 0): Promise<void> {
   const localId = `ob_${Date.now()}_${++outboxCounter}`
-  useApp.getState().addToOutbox(sessionId, { localId, text, kind: 'steer', sentAt: Date.now() })
+  useApp.getState().addToOutbox(sessionId, {
+    localId,
+    text,
+    kind: 'steer',
+    sentAt: Date.now(),
+    ...(imageCount ? { imageCount } : {}),
+  })
   try {
     await post(`/sessions/${sessionId}/prompts:steer`, { prompt_ids: [promptId] })
   } catch (e) {

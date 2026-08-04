@@ -19,6 +19,34 @@ function imageSrc(b: unknown): string | null {
   return null
 }
 
+/** Compaction divider: replaces the daemon-projection summary "user message"
+ *  with a boundary marker; the agent's working summary sits behind a toggle. */
+function CompactionCard({ msg }: { msg: ChatMessage }) {
+  const [open, setOpen] = useState(false)
+  const text = (msg.content ?? [])
+    .filter((b) => b.type === 'text')
+    .map((b) => (b as { text: string }).text)
+    .join('\n\n')
+  return (
+    <div className="py-1">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-3 text-zinc-600 transition-colors hover:text-zinc-400"
+        title="The agent's pre-compaction working summary (state it wrote down for itself)"
+      >
+        <span className="h-px flex-1 bg-zinc-800" />
+        <span className="text-[11px] tracking-wide">✂ context compacted {open ? '▾' : '▸'}</span>
+        <span className="h-px flex-1 bg-zinc-800" />
+      </button>
+      {open && (
+        <div className="mx-auto mt-2 max-w-[85%] rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-2 text-[12px] text-zinc-500">
+          <Markdown>{text}</Markdown>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function MessageView({
   msg,
   toolCalls,
@@ -32,6 +60,7 @@ function MessageView({
 }) {
   const [copied, setCopied] = useState(false)
   if (msg.role === 'tool') return null // results render inside their tool card
+  if (msg.compaction) return <CompactionCard msg={msg} />
   const isUser = msg.role === 'user'
   // Runtime control-plane envelopes (system reminders, notifications) arrive as
   // user-role text — strip them; a message with nothing real left renders as nothing.
@@ -229,6 +258,17 @@ export function ChatView({ sessionId }: { sessionId: string }) {
         {s.messages.map((m) => (
           <MessageView key={m.id} msg={m} toolCalls={s.toolCalls} subagents={s.subagents} plans={s.plans} />
         ))}
+
+        {s.compacting && (
+          <div className="flex items-center gap-3 py-1 text-zinc-600">
+            <span className="h-px flex-1 bg-zinc-800" />
+            <span className="flex items-center gap-2 text-[11px] tracking-wide">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-zinc-500" />
+              compacting context…
+            </span>
+            <span className="h-px flex-1 bg-zinc-800" />
+          </div>
+        )}
 
         {s.streaming.active && (
           <div className="space-y-2 text-[14px]">

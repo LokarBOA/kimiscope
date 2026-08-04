@@ -1,5 +1,5 @@
 import { abortQueuedAndRefresh, steerQueued } from '../state/sync'
-import { useApp } from '../state/store'
+import { promptContentText, useApp } from '../state/store'
 
 const NO_OUTBOX: import('../state/store').OutboxItem[] = []
 
@@ -47,8 +47,13 @@ export function PendingStrip({ sessionId }: { sessionId: string }) {
             <button
               title="Edit — move text back to the composer"
               onClick={() => {
+                // Edit gets clean text only — the `[image]` display prefix must
+                // not land in the composer as a literal (the attachment itself
+                // can't round-trip; re-attach after editing).
                 window.dispatchEvent(
-                  new CustomEvent('kimiscope:edit-queued', { detail: { sessionId, text } }),
+                  new CustomEvent('kimiscope:edit-queued', {
+                    detail: { sessionId, text: promptContentText(q.content).text },
+                  }),
                 )
                 void abortQueuedAndRefresh(sessionId, q.prompt_id)
               }}
@@ -58,7 +63,10 @@ export function PendingStrip({ sessionId }: { sessionId: string }) {
             </button>
             <button
               title="Steer — the model picks it up at the next step boundary"
-              onClick={() => void steerQueued(sessionId, q.prompt_id, text)}
+              onClick={() => {
+                const clean = promptContentText(q.content)
+                void steerQueued(sessionId, q.prompt_id, clean.text, clean.imageCount)
+              }}
               className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-zinc-500 hover:bg-zinc-800 hover:text-amber-400"
             >
               ⇢ steer

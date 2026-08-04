@@ -32,22 +32,48 @@ export interface TranscriptTurn {
   steps?: TranscriptStep[]
 }
 
+/** Non-turn page items: `marker` carries compaction summaries (and undo marks,
+ * ignored); `taskref` links background-task turns (rendered as normal turns
+ * when present, skipped here otherwise). */
+export interface TranscriptMarker {
+  kind: 'marker' | string
+  markerId?: string
+  marker?: string
+  payload?: { text?: string }
+}
+
 export interface TranscriptPage {
   agent_id: string
-  items: TranscriptTurn[]
+  items: (TranscriptTurn | TranscriptMarker)[]
   has_more?: boolean
 }
 
 /** Flatten transcript turns into the ChatMessage model: each turn's prompt
  *  becomes a user message, each step an assistant message; tool frames expand
  *  to tool_use + tool_result blocks so the store rebuilds full tool cards. */
-export function transcriptToMessages(turns: TranscriptTurn[]): ChatMessage[] {
+export function transcriptToMessages(items: (TranscriptTurn | TranscriptMarker)[]): ChatMessage[] {
   const out: ChatMessage[] = []
-  for (const t of turns) {
-    if (t.prompt) {
-      out.push({ id: t.turnId, role: 'user', content: [{ type: 'text', text: t.prompt }] })
+  for (const t of items) {
+    // Compaction markers carry the agent's working summary — render as a
+    // divider card, not a user bubble. Other markers (undo, …) are skipped.
+    if (t.kind === 'marker') {
+      const mk = t as TranscriptMarker
+      if (mk.marker === 'compaction' && mk.payload?.text) {
+        out.push({
+          id: mk.markerId ?? `compaction_${out.length}`,
+          role: 'user',
+          compaction: true,
+          content: [{ type: 'text', text: mk.payload.text }],
+        })
+      }
+      continue
     }
-    for (const s of t.steps ?? []) {
+    if (t.kind !== 'turn') continue
+    const turn = t as TranscriptTurn
+    if (turn.prompt) {
+      out.push({ id: turn.turnId, role: 'user', content: [{ type: 'text', text: turn.prompt }] })
+    }
+    for (const s of turn.steps ?? []) {
       const content: ContentBlock[] = []
       for (const f of s.frames ?? []) {
         if (f.kind === 'thinking') {

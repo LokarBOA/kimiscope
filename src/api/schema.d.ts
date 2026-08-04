@@ -94,6 +94,9 @@ export interface paths {
                                 started_at: unknown;
                                 open_in_apps: ("finder" | "cursor" | "vscode" | "iterm" | "terminal")[];
                                 dangerous_bypass_auth: boolean;
+                                experimental_flags?: {
+                                    [key: string]: boolean;
+                                };
                                 /** @enum {string} */
                                 backend?: "v1" | "v2";
                             };

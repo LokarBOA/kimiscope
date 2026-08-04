@@ -1,15 +1,25 @@
 # Changelog
 
-## Unreleased
+## v0.1.12
 
 ### Added
 
 - **`@` picker: directory drill-down + dir linking** — a bare `@` lists the project root, and directories open in place (click/Enter/Tab descends; the search root follows so each level lists its contents), with a `link` button (or Shift+Enter) to insert the directory path itself as the reference instead of drilling.
+- **"✂ context compacted" divider in the feed** — compaction summaries used to render as giant fake user bubbles (the daemon projects them as bare user-role text). They now render as a boundary divider with the agent's working summary behind a toggle — detected via transcript `marker:"compaction"` for cold history and the synthetic-id projection shape for live history — plus a transient "compacting context…" line while a compaction is running (kimi 0.29+ `compaction.*` events).
+- **Per-project "archive all"** — the project group header gains a hover 🗄 that archives every unarchived session in the project in one shot (single confirm, warns when sessions are mid-turn). Single-session archive stays in the row's ⋯ menu.
+- **MCP OAuth failures surface immediately** — a `mcp.oauth_failed` event (kimi 0.32+) now raises the sync-issue banner with the `/mcp-config login <name>` fix path instead of waiting for you to notice the Settings chip.
 
 ### Fixed
 
 - **Strip-steered prompts stay visible too** — clicking ⇢ steer on a queued row removed it from the daemon queue but gave it no outbox chip, so the prompt vanished until it landed at a step boundary. It now gets the same "steering (next step)…" chip as a composer steer, falling back to `queued…` if the turn ends unconsumed.
-- **Stop now stops everything, and always has a handle** — ■ Stop / Esc now (1) aborts the active turn AND drains the queue behind it (a queued message auto-starting made the button look dead), (2) falls back to the WS handle for app-sent prompts, and (3) as a last resort aborts by the newest user message's daemon id — which survives daemon-restart queue loss and prompts sent by other clients. If every handle fails, the app says so ("could not stop the turn — restart the daemon from Settings ⚙") instead of failing silently; a runaway agent should never outlast the button. **Restart daemon button always visible in Settings** — it used to render only with an MCP change pending, hiding exactly when you needed it (e.g. to pick up a freshly installed kimi-code version).
+- **Steer/edit on messages with images no longer poisons the chip** — both strip buttons built their text from the queue row's *display* string (`[image] caption…`), so the steering chip's match key never equaled the landed message's clean caption in the splice matcher: the chip survived the landing and decayed into a ghost `queued…` row that only an app restart cleared (the "stuck in limbo" report). Chips now store clean text plus an image count (rendered `🖼×N`), and ✎ edit pours only the caption into the composer instead of a literal `[image]` prefix (the attachment itself still can't round-trip — re-attach after editing). Chips already stuck clear on reload.
+- **Stop now stops everything, and always has a handle** — ■ Stop / Esc now (1) aborts the active turn AND drains the queue behind it (a queued message auto-starting made the button look dead), (2) falls back to the WS handle for app-sent prompts, and (3) as a last resort aborts by the newest user message's daemon id — which survives daemon-restart queue loss and prompts sent by other clients. If every handle fails, the app says so ("could not stop the turn — restart the daemon from Settings ⚙") instead of failing silently; a runaway agent should never outlast the button.
+- **Restart daemon button always visible in Settings** — it used to render only with an MCP change pending, hiding exactly when you needed it (e.g. to pick up a freshly installed kimi-code version).
+- **MCP server status chips in Settings** — each server now shows its live daemon state from `GET /mcp/servers`: connected (with tool count), connecting, or error. OAuth-required servers get an amber "needs login (TUI)" badge with the exact `/mcp-config login <name>` command in the tooltip, instead of a bare error.
+
+### Changed
+
+- **Verified against kimi-code 0.32.0** — isolated-daemon sweep: 76 REST paths identical, WS message set identical (only additive error-code literals; tolerated), and a live smoke (session → profile → subscribe → prompt with tool call) confirms the server-side `/messages` rewrite and snapshot re-assembly hold the contract. `/status` now reports a real context window when a model is bound, and `fs:content` sends true MIME types. Reference specs and generated types now track 0.32.0; no app changes required.
 
 ## v0.1.11
 
@@ -24,8 +34,6 @@
 
 - **Follow-scroll rewritten as a two-state anchor** — it now detaches ONLY on an explicit user scroll-up (wheel, touch, keyboard, or scrollbar drag) and re-anchors whenever the view lands at the bottom. Content changes — image decodes, media players, markdown reflow, history clamps — can no longer detach it (this was the recurring "chat popped off the bottom" bug; position-delta heuristics mistook browser scroll-anchoring adjustments for user scrolls).
 - **Steered/interrupted messages stay visible while waiting to post** — a steer the model never consumed used to vanish at turn end and only reappear when it landed next turn. Leftover chips now convert to a marked `queued…` chip that persists until the daemon queue row (or the splice) replaces them.
-- **Restart daemon button always visible in Settings** — it used to render only with an MCP change pending, hiding exactly when you needed it (e.g. to pick up a freshly installed kimi-code version).
-- **MCP server status chips in Settings** — each server now shows its live daemon state from `GET /mcp/servers`: connected (with tool count), connecting, or error. OAuth-required servers get an amber "needs login (TUI)" badge with the exact `/mcp-config login <name>` command in the tooltip, instead of a bare error.
 
 ### Changed
 

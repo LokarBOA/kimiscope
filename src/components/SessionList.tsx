@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp, type Workspace } from '../state/store'
-import { archiveSession, newSession, refreshSessions, renameSession, runSlashCommand, trustWorkspace, watchSession } from '../state/sync'
+import { archiveSession, archiveSessions, newSession, refreshSessions, renameSession, runSlashCommand, trustWorkspace, watchSession } from '../state/sync'
 import type { SessionSummary } from '../api/events'
 
 function timeAgo(iso: string): string {
@@ -351,6 +351,27 @@ export function SessionList() {
                   className="rounded px-1 text-sm text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-800 hover:text-zinc-200"
                 >
                   +
+                </button>
+                <button
+                  onClick={() => {
+                    const targets = list.filter((s) => !s.archived)
+                    if (targets.length === 0) return
+                    const midTurn = targets.filter(
+                      (s) => sessionStates[s.id]?.mainTurnActive ?? s.main_turn_active,
+                    ).length
+                    const warn = midTurn ? `\n⚠ ${midTurn} mid-turn — archiving cuts them off.` : ''
+                    if (
+                      !window.confirm(
+                        `Archive ${targets.length} session${targets.length > 1 ? 's' : ''} in ${workspace?.name ?? id}?\nThey disappear from this list; the data stays on disk.${warn}`,
+                      )
+                    )
+                      return
+                    void archiveSessions(targets.map((s) => s.id))
+                  }}
+                  title="Archive all sessions in this project"
+                  className="rounded px-1 text-[11px] text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-800 hover:text-red-400"
+                >
+                  🗄
                 </button>
               </div>
               {list.map((s) => (

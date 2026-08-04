@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { useApp } from './store'
+import { promptContentText, useApp } from './store'
 import type { Frame, Snapshot } from '../api/events'
 
 const SID = 'session_test_1'
@@ -380,5 +380,103 @@ describe('interrupted tool calls', () => {
     expect(tc.c1.status).toBe('done')
     expect(Array.isArray(tc.c1.output)).toBe(true)
     expect(tc.c2.status).toBe('interrupted')
+  })
+})
+
+describe('promptContentText', () => {
+  it('joins text blocks and counts media blocks', () => {
+    expect(
+      promptContentText([
+        { type: 'image', source: { kind: 'base64' } } as never,
+        { type: 'text', text: 'look at this' },
+      ]),
+    ).toEqual({ text: 'look at this', imageCount: 1 })
+  })
+
+  it('handles daemon-side image_url blocks the same way', () => {
+    expect(
+      promptContentText([
+        { type: 'image_url', imageUrl: { url: 'blobref:…' } } as never,
+        { type: 'text', text: 'caption' },
+      ]),
+    ).toEqual({ text: 'caption', imageCount: 1 })
+  })
+
+  it('text-only content has no media count', () => {
+    expect(promptContentText([{ type: 'text', text: 'hello' }])).toEqual({
+      text: 'hello',
+      imageCount: 0,
+    })
+  })
+
+  it('media-only content yields empty text (chip shows just the count)', () => {
+    expect(promptContentText([{ type: 'image' } as never])).toEqual({ text: '', imageCount: 1 })
+  })
+
+  it('missing content yields empty text and zero count', () => {
+    expect(promptContentText(undefined)).toEqual({ text: '', imageCount: 0 })
+  })
+
+  it('multiple text blocks join with a space', () => {
+    expect(
+      promptContentText([
+        { type: 'text', text: 'one' },
+        { type: 'text', text: 'two' },
+      ]),
+    ).toEqual({ text: 'one two', imageCount: 0 })
+  })
+})
+
+describe('compaction', () => {
+  it('tags synthetic-id bare user messages as compaction summaries (daemon source)', () => {
+    const st = useApp.getState()
+    st.setMessages(SID, [
+      { id: 'msg_01KZ6NMEDAEY1X329QT2Q2ZXWP', role: 'user', content: [{ type: 'text', text: 'real prompt' }] },
+      {
+        id: 'msg_session_x_000063',
+        role: 'user',
+        content: [{ type: 'text', text: 'working notes for next me' }],
+      },
+    ] as never)
+    const msgs = useApp.getState().sessionState[SID].messages
+    expect(msgs[0].compaction).toBeUndefined()
+    expect(msgs[1].compaction).toBe(true)
+  })
+
+  it('does not tag envelope-only synthetic messages', () => {
+    const st = useApp.getState()
+    st.setMessages(SID, [
+      {
+        id: 'msg_session_x_000064',
+        role: 'user',
+        content: [{ type: 'text', text: '<system-reminder>todo nudge</system-reminder>' }],
+      },
+    ] as never)
+    expect(useApp.getState().sessionState[SID].messages[0].compaction).toBeUndefined()
+  })
+
+  it('leaves messages untouched for transcript-sourced history', () => {
+    const st = useApp.getState()
+    st.setHistorySource(SID, 'transcript')
+    st.setMessages(SID, [
+      {
+        id: 'msg_session_x_000063',
+        role: 'user',
+        content: [{ type: 'text', text: 'working notes' }],
+      },
+    ] as never)
+    expect(useApp.getState().sessionState[SID].messages[0].compaction).toBeUndefined()
+  })
+
+  it('toggles the compacting indicator on compaction lifecycle frames', () => {
+    const st = useApp.getState()
+    st.applyFrame(frame('turn.started', { agentId: 'main', turnId: 1 }))
+    st.applyFrame(frame('compaction.started', {}))
+    expect(useApp.getState().sessionState[SID].compacting).toBe(true)
+    st.applyFrame(frame('compaction.completed', {}))
+    expect(useApp.getState().sessionState[SID].compacting).toBe(false)
+    st.applyFrame(frame('compaction.started', {}))
+    st.applyFrame(frame('compaction.failed', {}))
+    expect(useApp.getState().sessionState[SID].compacting).toBe(false)
   })
 })

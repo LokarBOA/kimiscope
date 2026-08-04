@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { ConnectionInfo } from '../api/connection'
+import { stripSystemEnvelopes } from './sysmsg'
 import type {
   ApprovalItem,
   ChatMessage,
@@ -57,6 +58,26 @@ export interface OutboxItem {
   steerFallback?: boolean
 }
 
+/** Clean text for a prompt's content blocks: text blocks joined, plus a count
+ *  of non-text (image/media) blocks for display. Outbox chips must store THIS
+ *  text — not the `[image] …` display rendering — or the splice matcher
+ *  (which compares against the landed message's clean text) can never match
+ *  and the chip sticks forever. */
+export function promptContentText(content?: { type: string; text?: string }[]): {
+  text: string
+  imageCount: number
+} {
+  const blocks = content ?? []
+  return {
+    text: blocks
+      .filter((c) => c.type === 'text')
+      .map((c) => c.text ?? '')
+      .join(' ')
+      .trim(),
+    imageCount: blocks.filter((c) => c.type !== 'text').length,
+  }
+}
+
 /** One ExitPlanMode call's recoverable plan record (kimi 0.29+ /transcript/plan). */
 export interface PlanRecord {
   tool_call_id: string
@@ -103,6 +124,9 @@ export interface SessionState {
   skills: SkillInfo[]
   /** Timestamp of the latest background-task completion (drives the sidebar badge). */
   recentTaskDone: number | null
+  /** Live: a compaction is running right now (compaction.started seen, no
+   *  completion yet) — ChatView shows a transient "compacting context…" line. */
+  compacting: boolean
 }
 
 const emptyStreaming = (): StreamingState => ({
@@ -137,7 +161,37 @@ const emptySession = (): SessionState => ({
   historySource: 'daemon',
   skills: [],
   recentTaskDone: null,
+  compacting: false,
 })
+
+/** A daemon-projection compaction summary arrives as a bare user-role message
+ *  with a synthetic sequential id (`msg_session_…_NNNNNN`) — real user prompts
+ *  carry ULIDs (`msg_01K…`), and the other synthetic-id injections are
+ *  system-reminder envelopes (stripped as control plane). So: user role +
+ *  synthetic id + non-empty stripped text ⇔ compaction summary. Only applied
+ *  to /messages history (transcript pages mark compactions explicitly). */
+export function isCompactionSummaryMessage(m: ChatMessage): boolean {
+  if (m.role !== 'user' || m.compaction) return false
+  if (!/^msg_session_/.test(m.id)) return false
+  const text = (m.content ?? [])
+    .filter((b) => b.type === 'text')
+    .map((b) => (b as { text: string }).text)
+    .join('\n')
+  return stripSystemEnvelopes(text).length > 0
+}
+
+/** Tag compaction summaries in a pulled /messages page. No-op for
+ *  transcript-sourced history (markers carry the flag already). */
+function tagCompactionMessages(msgs: ChatMessage[], source: 'daemon' | 'transcript'): ChatMessage[] {
+  if (source !== 'daemon') return msgs
+  let changed = false
+  const out = msgs.map((m) => {
+    if (!isCompactionSummaryMessage(m)) return m
+    changed = true
+    return { ...m, compaction: true }
+  })
+  return changed ? out : msgs
+}
 
 /** Main-agent tool calls left `running` with no result once the turn is over
  *  are dead (crash, abort, daemon restart) — mark them interrupted instead of
@@ -336,7 +390,7 @@ export const useApp = create<AppState>((set) => ({
           ...st.sessionState,
           [id]: {
             ...prev,
-            messages: msgs,
+            messages: tagCompactionMessages(msgs, prev.historySource),
             toolCalls,
             todos: extractTodos(msgs),
             ...(hasMore !== undefined ? { hasMore } : {}),
@@ -349,7 +403,7 @@ export const useApp = create<AppState>((set) => ({
     set((st) => {
       const prev = st.sessionState[id] ?? emptySession()
       const existing = new Set(prev.messages.map((m) => m.id))
-      const fresh = msgs.filter((m) => !existing.has(m.id))
+      const fresh = tagCompactionMessages(msgs, prev.historySource).filter((m) => !existing.has(m.id))
       // Older pages carry tool blocks that never became records — rebuild them
       // too, or old cards render as forever-running fallbacks with no output.
       const toolCalls = { ...prev.toolCalls }
@@ -712,6 +766,20 @@ export const useApp = create<AppState>((set) => ({
         case 'turn.step.started': {
           if (!isMain) break
           next.streaming = { ...next.streaming, thinking: '', assistant: '' }
+          break
+        }
+        case 'compaction.started': {
+          if (!isMain) break
+          next.compacting = true
+          break
+        }
+        case 'compaction.completed':
+        case 'compaction.failed':
+        case 'compaction.cancelled':
+        case 'compaction.blocked':
+        case 'compaction.unable': {
+          if (!isMain) break
+          next.compacting = false
           break
         }
         case 'thinking.delta': {

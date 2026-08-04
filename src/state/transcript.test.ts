@@ -82,4 +82,31 @@ describe('transcriptToMessages', () => {
     // No result block for the output-less call.
     expect(content.filter((b) => b.type === 'tool_result')).toHaveLength(1)
   })
+
+  it('converts compaction markers into divider messages and skips other markers', () => {
+    const msgs = transcriptToMessages([
+      { kind: 'turn', turnId: 't0', ordinal: 0, state: 'completed', prompt: 'before', steps: [] },
+      {
+        kind: 'marker',
+        markerId: 'm1',
+        marker: 'compaction',
+        payload: { text: 'working notes for next me' },
+      },
+      { kind: 'marker', markerId: 'm2', marker: 'undo' },
+      { kind: 'turn', turnId: 't1', ordinal: 1, state: 'completed', prompt: 'after', steps: [] },
+    ])
+    expect(msgs.map((m) => m.id)).toEqual(['t0', 'm1', 't1'])
+    expect(msgs[1]).toMatchObject({
+      role: 'user',
+      compaction: true,
+      content: [{ type: 'text', text: 'working notes for next me' }],
+    })
+  })
+
+  it('skips compaction markers with no summary text', () => {
+    const msgs = transcriptToMessages([
+      { kind: 'marker', markerId: 'm1', marker: 'compaction', payload: {} },
+    ])
+    expect(msgs).toHaveLength(0)
+  })
 })

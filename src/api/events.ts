@@ -27,6 +27,10 @@ export interface ChatMessage {
   toolCalls?: ToolCallRecord[]
   origin?: { kind: string }
   created_at?: string
+  /** Marks a context-compaction summary (transcript `marker:"compaction"` or a
+   *  daemon-projection synthetic user message) — renders as a divider card
+   *  with the summary behind a toggle, not as a user bubble. */
+  compaction?: boolean
 }
 
 export interface ToolCallRecord {
