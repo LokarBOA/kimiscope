@@ -26,6 +26,14 @@ interface Meta {
   server_version: string
 }
 
+/** Server version stamp — re-fetched on every socket (re)connect so a daemon
+ *  restart (which drops the socket) updates the top bar without an app reload. */
+export async function refreshServerMeta(): Promise<void> {
+  await get<Meta>('/meta')
+    .then((m) => useApp.getState().setServerVersion(m.server_version))
+    .catch(() => {})
+}
+
 let booted = false
 
 /** Re-run boot after an init failure (the Retry button on the error screen). */
@@ -57,9 +65,7 @@ export async function initApp(): Promise<void> {
   }
   useApp.getState().setConnection(conn)
 
-  get<Meta>('/meta')
-    .then((m) => useApp.getState().setServerVersion(m.server_version))
-    .catch(() => {})
+  void refreshServerMeta()
 
   // Model catalog + configured default, for session creation and the picker.
   Promise.all([
@@ -81,6 +87,8 @@ export async function initApp(): Promise<void> {
     onStateChange: (s) => {
       useApp.getState().setSocketState(s)
       if (s === 'open') {
+        // Fresh connection — the daemon may have restarted while we were down.
+        void refreshServerMeta()
         // (Re)subscribe anything that failed while the socket was down.
         for (const id of watching) {
           if (!useApp.getState().sessionState[id]?.synced) void watchSession(id)

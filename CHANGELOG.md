@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **Daemon version stamp refreshes on reconnect** — the top bar read `/meta` once at app boot, so after a daemon restart (e.g. to pick up a freshly installed kimi-code) it kept showing the old version until the whole app reloaded. `/meta` is now re-fetched on every socket connect.
+
 ## v0.1.12
 
 ### Added
