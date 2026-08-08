@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Changed
+
+- **Verified against kimi-code 0.34.0** — isolated-daemon sweep (0.32.0 → 0.34.0): REST gains one route, `GET /api/v2/sessions` (domain-grouped session metadata with `activity.status` filters incl. **failed**; candidates queued for the sidebar); nothing removed, v1 surfaces byte-identical. WS: `subagent.spawned` gains `model`/`thinkingEffort`, retry progress streams as phase fields, new ignorable `event.di.unit_changed` telemetry. Live smoke on the v2-engine daemon: full stream, and failed turns surface correctly in the v2 listing. Reference specs and generated types now track 0.34.0.
+
 ### Fixed
 
 - **Daemon version stamp refreshes on reconnect** — the top bar read `/meta` once at app boot, so after a daemon restart (e.g. to pick up a freshly installed kimi-code) it kept showing the old version until the whole app reloaded. `/meta` is now re-fetched on every socket connect.

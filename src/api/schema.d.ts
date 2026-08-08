@@ -1928,7 +1928,7 @@ export interface paths {
                                 plan_mode: boolean;
                                 swarm_mode: boolean;
                                 context_tokens: number;
-                                max_context_tokens: number;
+                                max_context_tokens?: number;
                                 context_usage: number;
                             };
                             request_id: string;
@@ -2595,13 +2595,15 @@ export interface paths {
                                 has_more: boolean;
                                 page_token?: string;
                                 /** @enum {string} */
-                                incomplete?: "candidate_cap";
+                                incomplete?: "candidate_cap" | "postings_budget" | "deadline";
                                 index_state: {
                                     /** @enum {string} */
                                     state: "building" | "ready" | "readonly";
                                     indexed_sessions: number;
                                     total_sessions: number;
                                     documents: number;
+                                    stale?: boolean;
+                                    degraded?: string;
                                 };
                                 /** @enum {string} */
                                 source: "live" | "index";
@@ -2676,6 +2678,8 @@ export interface paths {
                                     completed_at?: unknown;
                                     output_preview?: string;
                                     output_bytes?: number;
+                                    model?: string;
+                                    thinking_effort?: string;
                                 }[];
                             };
                             request_id: string;
@@ -2759,6 +2763,8 @@ export interface paths {
                                 completed_at?: unknown;
                                 output_preview?: string;
                                 output_bytes?: number;
+                                model?: string;
+                                thinking_effort?: string;
                             };
                             request_id: string;
                             details?: unknown;
@@ -4787,6 +4793,8 @@ export interface paths {
                                     completed_at?: unknown;
                                     output_preview?: string;
                                     output_bytes?: number;
+                                    model?: string;
+                                    thinking_effort?: string;
                                     /** @enum {string} */
                                     subagent_phase?: "queued" | "working" | "suspended" | "completed" | "failed";
                                     subagent_type?: string;
@@ -6384,6 +6392,107 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description List sessions with domain-grouped metadata (workspace / meta / activity; git via include=git). Opaque-cursor pagination: page_token binds the first page’s query conditions. */
+        get: {
+            parameters: {
+                query?: {
+                    "workspace.id"?: string | string[];
+                    "activity.status"?: ("running" | "approval" | "question" | "failed" | "idle") | ("running" | "approval" | "question" | "failed" | "idle")[];
+                    "meta.updated_after"?: number;
+                    "meta.archived"?: "true" | "false" | "all";
+                    sort?: "meta.updated_at_desc" | "meta.updated_at_asc" | "meta.created_at_desc";
+                    include?: string;
+                    page_size?: number;
+                    page_token?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                items: {
+                                    id: string;
+                                    workspace: {
+                                        id: string;
+                                        cwd: string | null;
+                                    };
+                                    meta: {
+                                        title: string | null;
+                                        last_prompt: string | null;
+                                        created_at: number;
+                                        updated_at: number;
+                                        archived: boolean;
+                                    };
+                                    activity: {
+                                        /** @enum {string} */
+                                        status: "running" | "approval" | "question" | "failed" | "idle";
+                                    };
+                                    git?: {
+                                        branch: string | null;
+                                        pull_request: {
+                                            number: number;
+                                            /** @enum {string} */
+                                            state: "open" | "closed" | "merged";
+                                            url: string;
+                                        } | null;
+                                    };
+                                }[];
+                                has_more: boolean;
+                                next_page_token: string | null;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        } | {
+                            /** @enum {number} */
+                            code: 40922;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/asyncapi.json": {
         parameters: {
             query?: never;
@@ -7234,6 +7343,50 @@ export interface operations {
             content: {
                 "application/json": {
                     args?: string;
+                    attachments?: ({
+                        /** @enum {string} */
+                        type: "image";
+                        source: {
+                            /** @enum {string} */
+                            kind: "url";
+                            url: string;
+                            id?: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "base64";
+                            media_type: string;
+                            data: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "file";
+                            file_id: string;
+                        };
+                    } | {
+                        /** @enum {string} */
+                        type: "video";
+                        source: {
+                            /** @enum {string} */
+                            kind: "url";
+                            url: string;
+                            id?: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "base64";
+                            media_type: string;
+                            data: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "file";
+                            file_id: string;
+                        };
+                    } | {
+                        /** @enum {string} */
+                        type: "file";
+                        file_id: string;
+                        name: string;
+                        media_type: string;
+                        size: number;
+                    })[];
                 };
             };
         };
@@ -7266,6 +7419,14 @@ export interface operations {
                     } | {
                         /** @enum {number} */
                         code: 40401;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40407;
                         msg: string;
                         /** @enum {string|null} */
                         data: null;
