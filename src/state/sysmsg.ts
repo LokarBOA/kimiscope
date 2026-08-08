@@ -2,9 +2,11 @@
  *  (todo reminders, plan-mode notices, background-task notifications, …).
  *  They are not chat content and must not render in the message log. */
 const ENVELOPES = [
-  // Skill loads: host wrapper sentence + the full skill body envelope.
-  /Skill tool loaded instructions for this request\. Follow them\.\s*<kimi-skill-loaded\b[^>]*>[\s\S]*?<\/kimi-skill-loaded>/g,
-  /<kimi-skill-loaded\b[^>]*>[\s\S]*?<\/kimi-skill-loaded>/g,
+  // Skill loads: host wrapper sentence + the full skill body envelope. The tag
+  // was `<kimi-skill-loaded>` pre-0.33 and is `<skill-loaded>` on the v2
+  // engine — accept both spellings.
+  /Skill tool loaded instructions for this request\. Follow them\.\s*<(?:kimi-)?skill-loaded\b[^>]*>[\s\S]*?<\/(?:kimi-)?skill-loaded>/g,
+  /<(?:kimi-)?skill-loaded\b[^>]*>[\s\S]*?<\/(?:kimi-)?skill-loaded>/g,
   /<system-reminder\b[^>]*>[\s\S]*?<\/system-reminder>/g,
   /<notification\b[^>]*>[\s\S]*?<\/notification>/g,
   /<cron-fire\b[^>]*>[\s\S]*?<\/cron-fire>/g,

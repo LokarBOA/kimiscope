@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **Skill-load envelopes hidden again on the v2 engine** — kimi 0.33+ renamed the envelope tag from `<kimi-skill-loaded>` to `<skill-loaded>`, so the whole skill body leaked into the feed as a fake user message. The stripper now accepts both spellings.
+
 ## v0.1.13
 
 ### Added

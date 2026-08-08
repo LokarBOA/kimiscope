@@ -42,6 +42,14 @@ describe('stripSystemEnvelopes', () => {
     expect(stripSystemEnvelopes(t)).toBe('before\n\nafter')
   })
 
+  it('removes v2-engine skill-load envelopes (unprefixed tag)', () => {
+    const t =
+      'Skill tool loaded instructions for this request. Follow them.\n<skill-loaded name="shared-machine" trigger="model-tool" source="user" dir="C:/x" args="">\n# Shared machine etiquette\nbody\n</skill-loaded>'
+    expect(stripSystemEnvelopes(t)).toBe('')
+    const bare = 'before\n<skill-loaded name="x">body</skill-loaded>\nafter'
+    expect(stripSystemEnvelopes(bare)).toBe('before\n\nafter')
+  })
+
   it('removes cron-fire envelopes entirely', () => {
     const t =
       '<cron-fire jobId="01ABC" cron="23 * * * *" recurring="true" coalescedCount="1" stale="false">\n<prompt>\nHourly check…\n</prompt>\n</cron-fire>'
