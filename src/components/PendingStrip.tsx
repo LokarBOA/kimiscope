@@ -10,6 +10,13 @@ export function PendingStrip({ sessionId }: { sessionId: string }) {
   // allocating `?? []` inside a selector infinite-loops useSyncExternalStore).
   const queue = useApp((st) => st.sessionState[sessionId]?.queue ?? null)
   const outbox = useApp((st) => st.sessionState[sessionId]?.outbox) ?? NO_OUTBOX
+  const subagents = useApp((st) => st.sessionState[sessionId]?.subagents)
+  // A running foreground subagent blocks steer injection — the main agent hits
+  // no step boundary until the child finishes. Say so on the chip instead of
+  // letting "steering (next step)…" promise something it can't keep.
+  const blockedBySubagent = Object.values(subagents ?? {}).some(
+    (x) => x.status === 'running' && !x.runInBackground,
+  )
 
   const queued = queue?.queued ?? []
   const pendingOutbox = outbox.filter(
@@ -89,7 +96,9 @@ export function PendingStrip({ sessionId }: { sessionId: string }) {
           <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-sky-400" />
           <span className="shrink-0">
             {o.kind === 'steer'
-              ? 'steering (next step)…'
+              ? blockedBySubagent
+                ? 'steering (after subagent finishes)…'
+                : 'steering (next step)…'
               : o.kind === 'interrupt'
                 ? 'interrupting…'
                 : o.kind === 'queue'

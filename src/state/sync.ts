@@ -505,6 +505,30 @@ export async function runSlashCommand(id: string, raw: string): Promise<SlashRes
       case 'fork':
         await forkSession(id)
         return { handled: true, notice: 'forked — child session is in the list' }
+      case 'usage': {
+        const u = await get<{
+          kind: string
+          summary?: { window: { duration: number; unit: string }; used: number; limit: number; reset_at?: string }
+          limits?: { window: { duration: number; unit: string }; used: number; limit: number; reset_at?: string }[]
+          extra_usage?: { monthly_used_cents: number; monthly_charge_limit_cents: number }
+        }>('/oauth/usage').catch(() => null)
+        if (u?.kind !== 'ok' || !u.summary) {
+          return { handled: true, notice: 'usage unavailable (needs kimi 0.30+ with a managed account)' }
+        }
+        const parts = [`${u.summary.used}% of the ${u.summary.window.duration}-${u.summary.window.unit} window`]
+        for (const l of u.limits ?? []) {
+          parts.push(`${l.used}% of ${l.window.duration}${l.window.unit} rate limit`)
+        }
+        if (u.extra_usage && u.extra_usage.monthly_charge_limit_cents > 0) {
+          parts.push(
+            `extra usage $${(u.extra_usage.monthly_used_cents / 100).toFixed(2)} of $${(u.extra_usage.monthly_charge_limit_cents / 100).toFixed(2)}`,
+          )
+        }
+        const reset = u.summary.reset_at
+          ? ` · resets ${new Date(u.summary.reset_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+          : ''
+        return { handled: true, notice: `usage: ${parts.join(' · ')}${reset}` }
+      }
       case 'export': {
         const filename = await exportSession(id)
         return { handled: true, notice: `exported → ${filename} (downloaded)` }
@@ -846,6 +870,9 @@ export async function sendPrompt(
     const res = await post<{ prompt_id: string }>(`/sessions/${sessionId}/prompts`, { content })
     if (res.prompt_id) {
       lastPromptIds.set(sessionId, res.prompt_id)
+      // Keep the daemon id on the chip so Stop can cancel a pending steer
+      // daemon-side instead of leaving it in the injection queue.
+      useApp.getState().tagOutboxPromptId(sessionId, localId, res.prompt_id)
       if (busy && mode === 'steer') {
         await post(`/sessions/${sessionId}/prompts:steer`, { prompt_ids: [res.prompt_id] })
       }
@@ -898,6 +925,7 @@ export async function steerQueued(sessionId: string, promptId: string, text: str
     text,
     kind: 'steer',
     sentAt: Date.now(),
+    promptId,
     ...(imageCount ? { imageCount } : {}),
   })
   try {
@@ -913,8 +941,23 @@ export async function steerQueued(sessionId: string, promptId: string, text: str
 /** Abort the active turn AND drain the queue behind it. Stop means stop — if a
  *  queued prompt auto-started after every Stop, the button would look broken
  *  (exactly the report that prompted this). Cleared queue rows get a notice so
- *  the drain is discoverable, not silent. */
+ *  the drain is discoverable, not silent. Pending steers are swept too: the
+ *  turn they were waiting for is dead, so they would sit in the injection
+ *  queue (daemon-side) and as chips (app-side) forever. */
 export async function abortActive(sessionId: string): Promise<boolean> {
+  // Best-effort cancel every pending steer/interrupt chip, daemon-side where we
+  // know the prompt id, then drop the chips. Returns the count for the notice.
+  const sweepSteers = async (): Promise<number> => {
+    const st = useApp.getState()
+    const pending = (st.sessionState[sessionId]?.outbox ?? []).filter(
+      (o) => o.kind === 'steer' || o.kind === 'interrupt' || o.steerFallback,
+    )
+    for (const o of pending) {
+      if (o.promptId) await abortPrompt(sessionId, o.promptId).catch(() => {})
+      st.clearOutbox(sessionId, o.localId)
+    }
+    return pending.length
+  }
   try {
     const q = await getPromptQueue(sessionId)
     const queued = q.queued ?? []
@@ -926,14 +969,27 @@ export async function abortActive(sessionId: string): Promise<boolean> {
     if (q.active) {
       await abortPrompt(sessionId, q.active.prompt_id)
       await drainQueue()
-      if (queued.length) {
-        useApp.getState().setNotice(`stopped — cleared ${queued.length} queued prompt${queued.length > 1 ? 's' : ''}`)
-      }
+      const swept = await sweepSteers()
+      const parts = [`stopped`]
+      if (queued.length) parts.push(`cleared ${queued.length} queued`)
+      if (swept) parts.push(`cancelled ${swept} steering`)
+      if (parts.length > 1) useApp.getState().setNotice(parts.join(' — '))
       return true
     }
     if (queued.length) {
       await drainQueue()
-      useApp.getState().setNotice(`cleared ${queued.length} queued prompt${queued.length > 1 ? 's' : ''}`)
+      const swept = await sweepSteers()
+      useApp
+        .getState()
+        .setNotice(
+          `cleared ${queued.length} queued prompt${queued.length > 1 ? 's' : ''}${swept ? ` — cancelled ${swept} steering` : ''}`,
+        )
+      return true
+    }
+    // Nothing active and nothing queued — there may still be steer chips.
+    const swept = await sweepSteers()
+    if (swept) {
+      useApp.getState().setNotice(`cancelled ${swept} steering prompt${swept > 1 ? 's' : ''}`)
       return true
     }
   } catch {
@@ -942,6 +998,7 @@ export async function abortActive(sessionId: string): Promise<boolean> {
   const promptId = lastPromptIds.get(sessionId)
   if (promptId && socket) {
     socket.send('abort', { session_id: sessionId, prompt_id: promptId })
+    await sweepSteers()
     return true
   }
   // Last handle: the newest user message carrying a daemon id IS the active

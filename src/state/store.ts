@@ -55,6 +55,9 @@ export interface OutboxItem {
   kind: 'queue' | 'steer' | 'interrupt' | 'send'
   sentAt: number
   imageCount?: number
+  /** Daemon prompt id, when known — lets Stop cancel a pending steer
+   *  daemon-side instead of leaving it to rot in the injection queue. */
+  promptId?: string
   /** Set when a steer/interrupt chip survived a turn end unconsumed (it falls
    *  back to the daemon queue and lands next turn) — keeps it from being
    *  swept as a settled queue chip at the next turn boundary. */
@@ -322,6 +325,7 @@ interface AppState {
   setPlans: (id: string, plans: Record<string, PlanRecord>) => void
   addToOutbox: (id: string, item: OutboxItem) => void
   clearOutbox: (id: string, localId?: string) => void
+  tagOutboxPromptId: (id: string, localId: string, promptId: string) => void
   setSkills: (id: string, skills: SkillInfo[]) => void
   setHistorySource: (id: string, source: 'daemon' | 'transcript') => void
   markTaskDone: (id: string) => void
@@ -627,6 +631,21 @@ export const useApp = create<AppState>((set) => ({
           [id]: {
             ...prev,
             outbox: localId ? prev.outbox.filter((o) => o.localId !== localId) : [],
+          },
+        },
+      }
+    }),
+
+  tagOutboxPromptId: (id, localId, promptId) =>
+    set((st) => {
+      const prev = st.sessionState[id]
+      if (!prev) return st
+      return {
+        sessionState: {
+          ...st.sessionState,
+          [id]: {
+            ...prev,
+            outbox: prev.outbox.map((o) => (o.localId === localId ? { ...o, promptId } : o)),
           },
         },
       }

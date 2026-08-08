@@ -19,6 +19,7 @@ export const COMMANDS: SlashCommand[] = [
   { name: 'title', description: 'Rename this session', args: '<text>' },
   { name: 'goal', description: 'Start a goal, or pause|resume|cancel', args: '<objective|pause|resume|cancel>' },
   { name: 'fork', description: 'Fork this session, keeping full history' },
+  { name: 'usage', description: 'Show plan usage + quota windows (kimi 0.30+)' },
   { name: 'export', description: 'Export session + logs as a zip' },
   { name: 'copy', description: 'Copy the last assistant message' },
   { name: 'new', description: 'Start a fresh session in this folder' },

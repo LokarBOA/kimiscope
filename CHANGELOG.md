@@ -2,10 +2,16 @@
 
 ## Unreleased
 
+### Added
+
+- **`/usage` command** — shows the managed-account quota windows from `oauth/usage` (weekly window, rate-limit window, extra-usage balance, reset time) as a composer notice. Older daemons get an "unavailable" note.
+
 ### Fixed
 
 - **Skill-load envelopes hidden again on the v2 engine** — kimi 0.33+ renamed the envelope tag from `<kimi-skill-loaded>` to `<skill-loaded>`, so the whole skill body leaked into the feed as a fake user message. The stripper now accepts both spellings.
 - **Running tool calls no longer double-render** — the v2 engine splices in-progress assistant messages (with their tool_use blocks) into the feed mid-turn, so a still-running call rendered twice in lockstep: once from the feed, once from the streaming section (most visible as twin subagent panels with identical thinking). The streaming section now skips calls already present in the feed.
+- **Stop cancels pending steers instead of leaving them in limbo** — a steered prompt lives in the daemon's injection queue, not the prompt queue, so Stop's drain missed it: the chip sat "steering…" forever, never posting or clearing. Chips now carry the daemon prompt id, and Stop cancels every pending steer/interrupt daemon-side (best-effort) and drops the chips, with the notice saying what was cancelled.
+- **Steer chips admit when a subagent is in the way** — a running foreground subagent blocks steer injection until it finishes (the main agent hits no step boundary mid-call — a daemon limitation, not fixable app-side). The chip now reads "steering (after subagent finishes)…" so the wait has a visible cause; Stop remains the override.
 
 ## v0.1.13
 
