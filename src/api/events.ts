@@ -52,6 +52,9 @@ export interface SubagentRecord {
   description?: string
   parentToolCallId?: string
   runInBackground?: boolean
+  /** 0.34+ spawn payload: the child's model/effort (absent on older daemons). */
+  model?: string
+  thinkingEffort?: string
   status: 'running' | 'done'
   resultSummary?: string
   /** Live streaming buffers while the subagent works. */

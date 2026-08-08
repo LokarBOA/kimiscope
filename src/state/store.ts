@@ -32,6 +32,9 @@ export interface StreamingState {
   turnId: number | null
   thinking: string
   assistant: string
+  /** Live auto-retry state (0.34+ `turn.step.retrying`/`retrying` frames):
+   *  the request failed and the daemon is backing off before the next attempt. */
+  retrying: { attempt: number; max: number } | null
 }
 
 export interface PromptQueueItem {
@@ -134,6 +137,7 @@ const emptyStreaming = (): StreamingState => ({
   turnId: null,
   thinking: '',
   assistant: '',
+  retrying: null,
 })
 
 const emptySession = (): SessionState => ({
@@ -258,6 +262,11 @@ interface AppState {
   /** 0.31+ trust states by workspace id (absent = unprobed / older daemon). */
   workspaceTrust: Record<string, boolean>
   sessions: SessionSummary[]
+  /** 0.34+ `/api/v2/sessions` enrichment: sessionId → activity.status
+   *  (running/approval/question/failed/idle). Empty on older daemons. */
+  sessionActivity: Record<string, string>
+  /** Sidebar filter: show only sessions needing attention (approval/question/failed). */
+  attentionOnly: boolean
   activeSessionId: string | null
   sessionState: Record<string, SessionState>
   models: ModelInfo[]
@@ -278,6 +287,8 @@ interface AppState {
   setWorkspaceTrust: (id: string, trusted: boolean) => void
   setWorkspaceTrustAll: (map: Record<string, boolean>) => void
   setSessions: (s: SessionSummary[]) => void
+  setSessionActivity: (map: Record<string, string>) => void
+  setAttentionOnly: (b: boolean) => void
   setActiveSession: (id: string | null) => void
   applySnapshot: (id: string, snap: Snapshot) => void
   applyFrame: (f: Frame) => void
@@ -324,6 +335,8 @@ export const useApp = create<AppState>((set) => ({
   workspaces: [],
   workspaceTrust: {},
   sessions: [],
+  sessionActivity: {},
+  attentionOnly: false,
   activeSessionId: null,
   sessionState: {},
   models: [],
@@ -343,6 +356,8 @@ export const useApp = create<AppState>((set) => ({
   setWorkspaceTrustAll: (map) =>
     set((st) => ({ workspaceTrust: { ...st.workspaceTrust, ...map } })),
   setSessions: (sessions) => set({ sessions }),
+  setSessionActivity: (sessionActivity) => set({ sessionActivity }),
+  setAttentionOnly: (attentionOnly) => set({ attentionOnly }),
   setActiveSession: (activeSessionId) => set({ activeSessionId }),
 
   setMessages: (id, msgs, hasMore) =>
@@ -758,14 +773,26 @@ export const useApp = create<AppState>((set) => ({
         }
         case 'turn.started': {
           if (!isMain) break
-          next.streaming = { active: true, turnId: p.turnId as number, thinking: '', assistant: '' }
+          next.streaming = { active: true, turnId: p.turnId as number, thinking: '', assistant: '', retrying: null }
           next.busy = true
           next.mainTurnActive = true
           break
         }
         case 'turn.step.started': {
           if (!isMain) break
-          next.streaming = { ...next.streaming, thinking: '', assistant: '' }
+          next.streaming = { ...next.streaming, thinking: '', assistant: '', retrying: null }
+          break
+        }
+        case 'turn.step.retrying':
+        case 'retrying': {
+          if (!isMain) break
+          next.streaming = {
+            ...next.streaming,
+            retrying: {
+              attempt: Number(p.nextAttempt ?? p.failedAttempt ?? 0),
+              max: Number(p.maxAttempts ?? 0),
+            },
+          }
           break
         }
         case 'compaction.started': {
@@ -790,7 +817,7 @@ export const useApp = create<AppState>((set) => ({
             )
             break
           }
-          next.streaming = { ...next.streaming, thinking: next.streaming.thinking + (p.delta as string) }
+          next.streaming = { ...next.streaming, thinking: next.streaming.thinking + (p.delta as string), retrying: null }
           break
         }
         case 'assistant.delta': {
@@ -801,7 +828,7 @@ export const useApp = create<AppState>((set) => ({
             )
             break
           }
-          next.streaming = { ...next.streaming, assistant: next.streaming.assistant + (p.delta as string) }
+          next.streaming = { ...next.streaming, assistant: next.streaming.assistant + (p.delta as string), retrying: null }
           break
         }
         case 'tool.call.delta': {
@@ -876,6 +903,9 @@ export const useApp = create<AppState>((set) => ({
               description: p.description as string | undefined,
               parentToolCallId: p.parentToolCallId as string | undefined,
               runInBackground: Boolean(p.runInBackground),
+              // 0.34+: which model/effort the child runs on (absent = daemon default)
+              model: (p.model as string) ?? undefined,
+              thinkingEffort: (p.thinkingEffort as string) ?? undefined,
               status: 'running',
             },
           }
@@ -945,7 +975,7 @@ export const useApp = create<AppState>((set) => ({
         }
         case 'turn.ended': {
           if (!isMain) break
-          next.streaming = { ...next.streaming, active: false }
+          next.streaming = { ...next.streaming, active: false, retrying: null }
           next.mainTurnActive = false
           if (next.usage) next.usage = { ...next.usage, turn_count: next.usage.turn_count + 1 }
           if (p.reason === 'failed' && p.error) {
@@ -970,7 +1000,7 @@ export const useApp = create<AppState>((set) => ({
           if (!isMain) break
           next.busy = false
           next.mainTurnActive = false
-          next.streaming = { ...next.streaming, active: false }
+          next.streaming = { ...next.streaming, active: false, retrying: null }
           next.outbox = next.outbox.filter((o) => o.kind === 'steer' || o.kind === 'interrupt' || o.steerFallback)
           for (const o of next.outbox) {
             o.kind = 'queue'

@@ -277,7 +277,13 @@ export function ChatView({ sessionId }: { sessionId: string }) {
             {liveCalls.map((c) => (
               <ToolCard key={c.toolCallId} call={c} live subagents={s.subagents} allCalls={s.toolCalls} />
             ))}
-            {!s.streaming.thinking && !s.streaming.assistant && liveCalls.length === 0 && (
+            {s.streaming.retrying && (
+              <div className="flex items-center gap-2 text-sm text-amber-500/80">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-amber-400" />
+                request failed — retrying (attempt {s.streaming.retrying.attempt} of {s.streaming.retrying.max})…
+              </div>
+            )}
+            {!s.streaming.thinking && !s.streaming.assistant && liveCalls.length === 0 && !s.streaming.retrying && (
               <div className="flex items-center gap-2 text-sm text-zinc-500">
                 <span className="h-2 w-2 animate-pulse rounded-full bg-sky-400" />
                 Working…

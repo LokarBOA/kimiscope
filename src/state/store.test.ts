@@ -480,3 +480,74 @@ describe('compaction', () => {
     expect(useApp.getState().sessionState[SID].compacting).toBe(false)
   })
 })
+
+describe('retry + subagent spawn fields (kimi 0.34)', () => {
+  it('sets streaming.retrying on turn.step.retrying and clears it on the next step', () => {
+    const st = useApp.getState()
+    st.applyFrame(frame('turn.started', { agentId: 'main', turnId: 1 }))
+    st.applyFrame(
+      frame('turn.step.retrying', {
+        agentId: 'main',
+        turnId: 1,
+        step: 1,
+        failedAttempt: 1,
+        nextAttempt: 2,
+        maxAttempts: 5,
+      }),
+    )
+    expect(useApp.getState().sessionState[SID].streaming.retrying).toEqual({ attempt: 2, max: 5 })
+    st.applyFrame(frame('turn.step.started', { agentId: 'main' }))
+    expect(useApp.getState().sessionState[SID].streaming.retrying).toBeNull()
+  })
+
+  it('accepts the bare retrying event and clears on assistant progress', () => {
+    const st = useApp.getState()
+    st.applyFrame(frame('turn.started', { agentId: 'main', turnId: 1 }))
+    st.applyFrame(frame('retrying', { agentId: 'main', nextAttempt: 3, maxAttempts: 4 }))
+    expect(useApp.getState().sessionState[SID].streaming.retrying).toEqual({ attempt: 3, max: 4 })
+    st.applyFrame(frame('assistant.delta', { agentId: 'main', delta: 'hi' }))
+    expect(useApp.getState().sessionState[SID].streaming.retrying).toBeNull()
+  })
+
+  it('clears retrying when the turn ends', () => {
+    const st = useApp.getState()
+    st.applyFrame(frame('turn.started', { agentId: 'main', turnId: 1 }))
+    st.applyFrame(frame('turn.step.retrying', { agentId: 'main', nextAttempt: 2, maxAttempts: 5 }))
+    st.applyFrame(frame('turn.ended', { agentId: 'main' }))
+    expect(useApp.getState().sessionState[SID].streaming.retrying).toBeNull()
+  })
+
+  it('stores model and thinkingEffort from subagent.spawned', () => {
+    const st = useApp.getState()
+    st.applyFrame(frame('turn.started', { agentId: 'main', turnId: 1 }))
+    st.applyFrame(
+      frame('subagent.spawned', {
+        subagentId: 'sub1',
+        subagentName: 'coder',
+        parentToolCallId: 'tc1',
+        runInBackground: false,
+        model: 'kimi-code/k3',
+        thinkingEffort: 'high',
+      }),
+    )
+    const sub = useApp.getState().sessionState[SID].subagents.sub1
+    expect(sub.model).toBe('kimi-code/k3')
+    expect(sub.thinkingEffort).toBe('high')
+  })
+
+  it('tolerates spawn payloads without model fields (older daemons)', () => {
+    const st = useApp.getState()
+    st.applyFrame(frame('turn.started', { agentId: 'main', turnId: 1 }))
+    st.applyFrame(
+      frame('subagent.spawned', {
+        subagentId: 'sub2',
+        subagentName: 'explore',
+        parentToolCallId: 'tc2',
+        runInBackground: true,
+      }),
+    )
+    const sub = useApp.getState().sessionState[SID].subagents.sub2
+    expect(sub.model).toBeUndefined()
+    expect(sub.thinkingEffort).toBeUndefined()
+  })
+})

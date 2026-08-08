@@ -19,6 +19,9 @@ function SessionRow({ s }: { s: SessionSummary }) {
   const turnActive = live?.mainTurnActive ?? s.main_turn_active
   const pending = (live?.pendingInteraction ?? s.pending_interaction) !== 'none'
   const archived = s.archived === true
+  // 0.34+ v2 activity: surface a failed last turn even when nothing is running.
+  const activity = useApp((st) => st.sessionActivity[s.id])
+  const failed = activity === 'failed' && !turnActive
   const [editing, setEditing] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -114,6 +117,11 @@ function SessionRow({ s }: { s: SessionSummary }) {
             ✓
           </span>
         )}
+        {failed && (
+          <span title="Last turn failed — open the session for the error" className="shrink-0 text-[11px] text-red-400">
+            ✕
+          </span>
+        )}
         {archived ? (
           <span className="shrink-0 text-[10px] text-zinc-600 uppercase">archived</span>
         ) : (
@@ -145,7 +153,9 @@ function SessionRow({ s }: { s: SessionSummary }) {
                     onClick={(e) => {
                       e.stopPropagation()
                       setMenuOpen(false)
-                      void runSlashCommand(s.id, '/fork')
+                      void runSlashCommand(s.id, '/fork').then((r) => {
+                        if (r.notice) useApp.getState().setNotice(r.notice)
+                      })
                     }}
                     className="block w-full px-3 py-1.5 text-left text-[12px] text-zinc-300 hover:bg-zinc-800"
                   >
@@ -155,7 +165,9 @@ function SessionRow({ s }: { s: SessionSummary }) {
                     onClick={(e) => {
                       e.stopPropagation()
                       setMenuOpen(false)
-                      void runSlashCommand(s.id, '/export')
+                      void runSlashCommand(s.id, '/export').then((r) => {
+                        if (r.notice) useApp.getState().setNotice(r.notice)
+                      })
                     }}
                     className="block w-full px-3 py-1.5 text-left text-[12px] text-zinc-300 hover:bg-zinc-800"
                   >
@@ -251,6 +263,9 @@ export function SessionList() {
   const workspaces = useApp((st) => st.workspaces)
   const workspaceTrust = useApp((st) => st.workspaceTrust)
   const sessionStates = useApp((st) => st.sessionState)
+  const sessionActivity = useApp((st) => st.sessionActivity)
+  const attentionOnly = useApp((st) => st.attentionOnly)
+  const setAttentionOnly = useApp((st) => st.setAttentionOnly)
   const showArchived = useApp((st) => st.showArchived)
   const setShowArchived = useApp((st) => st.setShowArchived)
 
@@ -281,25 +296,48 @@ export function SessionList() {
     })
   }, [sessions, workspaces])
 
+  // Attention filter (0.34+ v2 activity): keep only sessions awaiting
+  // approval/question or whose last turn failed; drop emptied groups.
+  const ATTENTION = new Set(['approval', 'question', 'failed'])
+  const visibleGroups = attentionOnly
+    ? groups
+        .map((g) => ({
+          ...g,
+          sessions: g.sessions.filter((s) => ATTENTION.has(sessionActivity[s.id] ?? '')),
+        }))
+        .filter((g) => g.sessions.length > 0)
+    : groups
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-2.5">
         <span className="text-xs font-semibold tracking-wider text-zinc-400 uppercase">
           Projects
         </span>
-        <button
-          onClick={() => {
-            setShowArchived(!showArchived)
-            void refreshSessions()
-          }}
-          title={showArchived ? 'Hide archived sessions' : 'Show archived sessions'}
-          className={`text-[13px] ${showArchived ? 'text-zinc-200' : 'text-zinc-600 hover:text-zinc-400'}`}
-        >
-          🗄
-        </button>
+        <span className="flex items-center gap-1.5">
+          {Object.keys(sessionActivity).length > 0 && (
+            <button
+              onClick={() => setAttentionOnly(!attentionOnly)}
+              title={attentionOnly ? 'Show all sessions' : 'Show only sessions needing attention (approval / question / failed)'}
+              className={`text-[13px] ${attentionOnly ? 'text-amber-300' : 'text-zinc-600 hover:text-zinc-400'}`}
+            >
+              ⚠
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setShowArchived(!showArchived)
+              void refreshSessions()
+            }}
+            title={showArchived ? 'Hide archived sessions' : 'Show archived sessions'}
+            className={`text-[13px] ${showArchived ? 'text-zinc-200' : 'text-zinc-600 hover:text-zinc-400'}`}
+          >
+            🗄
+          </button>
+        </span>
       </div>
       <div className="flex-1 overflow-y-auto p-1.5">
-        {groups.map(({ workspace, id, sessions: list }) => {
+        {visibleGroups.map(({ workspace, id, sessions: list }) => {
           // Presence: sessions mid-turn (⚡, sky) vs background-task-only (⟳, amber).
           // Turn activity keys on main_turn_active — `busy` includes background
           // tasks (a session serving pages looks "working" while the agent idles).
@@ -382,6 +420,9 @@ export function SessionList() {
         })}
         {groups.length === 0 && (
           <div className="p-4 text-center text-sm text-zinc-600">No sessions yet</div>
+        )}
+        {groups.length > 0 && visibleGroups.length === 0 && (
+          <div className="p-4 text-center text-sm text-zinc-600">Nothing needs attention</div>
         )}
       </div>
       <div className="border-t border-zinc-800">

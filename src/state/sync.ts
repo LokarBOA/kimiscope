@@ -134,8 +134,41 @@ export async function refreshSessions(): Promise<void> {
         useApp.getState().mergeUsage(s.id, s.usage)
       }
     }
+    void refreshSessionActivity()
   } catch {
     // daemon hiccup; next poll recovers
+  }
+}
+
+interface V2SessionItem {
+  id: string
+  activity?: { status?: string }
+}
+
+let v2SessionsUnsupported = false
+
+/** 0.34+ enrichment: pull `/api/v2/sessions` and map sessionId → activity.status
+ *  (failed/approval/question/running/idle) for sidebar markers + the attention
+ *  filter. Silent no-op on older daemons (one 404 probe, then stays off). */
+export async function refreshSessionActivity(): Promise<void> {
+  if (v2SessionsUnsupported) return
+  try {
+    const map: Record<string, string> = {}
+    let token: string | null = null
+    for (let page = 0; page < 5; page++) {
+      const qs = token ? `?page_token=${encodeURIComponent(token)}` : ''
+      const res = await get<{ items?: V2SessionItem[]; has_more?: boolean; next_page_token?: string | null }>(
+        `/v2/sessions${qs}`,
+      )
+      for (const it of res.items ?? []) {
+        if (it.activity?.status) map[it.id] = it.activity.status
+      }
+      token = res.next_page_token ?? null
+      if (!token || !res.has_more) break
+    }
+    useApp.getState().setSessionActivity(map)
+  } catch {
+    v2SessionsUnsupported = true
   }
 }
 
@@ -358,12 +391,12 @@ export async function renameSession(id: string, title: string): Promise<void> {
   await refreshSessions()
 }
 
-/** Fork into a child session (preserving full history) and open it. */
+/** Fork into a child session (preserving full history). The child joins the
+ *  session list; we stay on the current session (kimi 0.33+ semantics — the
+ *  fork is visible at the top of its project group after the refresh). */
 export async function forkSession(id: string): Promise<void> {
-  const child = await post<{ id: string }>(`/sessions/${id}/children`, {})
+  await post<{ id: string }>(`/sessions/${id}/children`, {})
   await refreshSessions()
-  useApp.getState().setActiveSession(child.id)
-  void watchSession(child.id)
 }
 
 /** Export session + diagnostic logs as a zip. The endpoint streams the archive
@@ -471,7 +504,7 @@ export async function runSlashCommand(id: string, raw: string): Promise<SlashRes
       }
       case 'fork':
         await forkSession(id)
-        return { handled: true, notice: 'forked — opened child session' }
+        return { handled: true, notice: 'forked — child session is in the list' }
       case 'export': {
         const filename = await exportSession(id)
         return { handled: true, notice: `exported → ${filename} (downloaded)` }

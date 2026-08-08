@@ -224,6 +224,15 @@ function SubagentPanel({
           className={`h-1.5 w-1.5 rounded-full ${sub.status === 'running' ? 'animate-pulse bg-violet-400' : 'bg-emerald-500'}`}
         />
         <span className="font-medium text-violet-300">{sub.name}</span>
+        {sub.model && (
+          <span
+            className="rounded bg-zinc-800 px-1.5 py-px text-[10px] text-zinc-400"
+            title="Model this subagent runs on (kimi 0.34+)"
+          >
+            {sub.model}
+            {sub.thinkingEffort ? ` · ${sub.thinkingEffort}` : ''}
+          </span>
+        )}
         {sub.description && <span className="truncate text-zinc-500">{sub.description}</span>}
       </div>
       {sub.status === 'running' && sub.thinking && (
