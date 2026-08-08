@@ -193,8 +193,18 @@ export function ChatView({ sessionId }: { sessionId: string }) {
 
   if (!s) return <div className="p-6 text-zinc-500">Loading session…</div>
 
+  // Calls whose tool_use block is already in the feed must not ALSO render in
+  // the streaming section (the v2 engine splices in-progress assistant
+  // messages mid-turn, so a running call would double-render).
+  const feedCallIds = new Set(
+    (s?.messages ?? []).flatMap((m) =>
+      (m.content ?? [])
+        .filter((b) => b.type === 'tool_use')
+        .map((b) => (b as { tool_call_id: string }).tool_call_id),
+    ),
+  )
   const liveCalls = Object.values(s.toolCalls).filter(
-    (c) => c.status === 'running' && (c.agentId ?? 'main') === 'main',
+    (c) => c.status === 'running' && (c.agentId ?? 'main') === 'main' && !feedCallIds.has(c.toolCallId),
   )
   const running = s.tasks.filter((t) => t.status === 'running')
   const backgroundBusy = !s.streaming.active && s.busy && !s.mainTurnActive && running.length > 0

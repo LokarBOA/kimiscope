@@ -5,6 +5,7 @@
 ### Fixed
 
 - **Skill-load envelopes hidden again on the v2 engine** — kimi 0.33+ renamed the envelope tag from `<kimi-skill-loaded>` to `<skill-loaded>`, so the whole skill body leaked into the feed as a fake user message. The stripper now accepts both spellings.
+- **Running tool calls no longer double-render** — the v2 engine splices in-progress assistant messages (with their tool_use blocks) into the feed mid-turn, so a still-running call rendered twice in lockstep: once from the feed, once from the streaming section (most visible as twin subagent panels with identical thinking). The streaming section now skips calls already present in the feed.
 
 ## v0.1.13
 
