@@ -1,4 +1,4 @@
-import { abortQueuedAndRefresh, steerQueued } from '../state/sync'
+import { abortQueuedAndRefresh, recallOutboxPrompt, steerQueued } from '../state/sync'
 import { promptContentText, useApp } from '../state/store'
 
 const NO_OUTBOX: import('../state/store').OutboxItem[] = []
@@ -91,7 +91,7 @@ export function PendingStrip({ sessionId }: { sessionId: string }) {
       {pendingOutbox.map((o) => (
         <div
           key={o.localId}
-          className="flex items-center gap-2 rounded-md border border-dashed border-sky-800/50 bg-sky-950/10 px-2.5 py-1 text-[12px] text-sky-400/80"
+          className="group flex items-center gap-2 rounded-md border border-dashed border-sky-800/50 bg-sky-950/10 px-2.5 py-1 text-[12px] text-sky-400/80"
         >
           <span className="h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-sky-400" />
           <span className="shrink-0">
@@ -109,6 +109,32 @@ export function PendingStrip({ sessionId }: { sessionId: string }) {
             {o.imageCount ? `🖼×${o.imageCount} ` : ''}
             {o.text}
           </span>
+          {(o.kind === 'steer' || o.kind === 'interrupt') && o.promptId && (
+            <>
+              <button
+                title="Edit — cancel the steer and move the text back to the composer"
+                onClick={() => {
+                  void recallOutboxPrompt(sessionId, o.localId).then((text) => {
+                    if (text != null) {
+                      window.dispatchEvent(
+                        new CustomEvent('kimiscope:edit-queued', { detail: { sessionId, text } }),
+                      )
+                    }
+                  })
+                }}
+                className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-sky-500/70 hover:bg-sky-900/40 hover:text-sky-300"
+              >
+                ✎
+              </button>
+              <button
+                title="Recall — cancel the steer (it never posts)"
+                onClick={() => void recallOutboxPrompt(sessionId, o.localId)}
+                className="shrink-0 rounded px-1.5 py-0.5 text-[11px] text-sky-500/70 hover:bg-sky-900/40 hover:text-red-400"
+              >
+                ✕
+              </button>
+            </>
+          )}
         </div>
       ))}
     </div>

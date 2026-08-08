@@ -5,6 +5,7 @@
 ### Added
 
 - **`/usage` command** — shows the managed-account quota windows from `oauth/usage` (weekly window, rate-limit window, extra-usage balance, reset time) as a composer notice. Older daemons get an "unavailable" note.
+- **Recall / edit on steering chips** — pending steer and interrupt chips gain ✎ and ✕ controls: ✕ cancels the prompt daemon-side and drops the chip (it never posts); ✎ cancels and pours the text back into the composer for a retry. Uses the daemon prompt id the chip now carries, so the cancel actually lands instead of just hiding the chip.
 
 ### Fixed
 

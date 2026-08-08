@@ -938,6 +938,18 @@ export async function steerQueued(sessionId: string, promptId: string, text: str
   if (q) useApp.getState().setQueue(sessionId, q)
 }
 
+/** Recall a pending steer/interrupt chip: cancel the prompt daemon-side
+ *  (best-effort — if it already landed, the message is simply in the feed)
+ *  and drop the chip. Returns the item's clean text for the edit path. */
+export async function recallOutboxPrompt(sessionId: string, localId: string): Promise<string | null> {
+  const st = useApp.getState()
+  const item = st.sessionState[sessionId]?.outbox.find((o) => o.localId === localId)
+  if (!item) return null
+  if (item.promptId) await abortPrompt(sessionId, item.promptId).catch(() => {})
+  st.clearOutbox(sessionId, localId)
+  return item.text
+}
+
 /** Abort the active turn AND drain the queue behind it. Stop means stop — if a
  *  queued prompt auto-started after every Stop, the button would look broken
  *  (exactly the report that prompted this). Cleared queue rows get a notice so
