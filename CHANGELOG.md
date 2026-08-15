@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.1.14
 
 ### Added
 
@@ -13,6 +13,10 @@
 - **Running tool calls no longer double-render** — the v2 engine splices in-progress assistant messages (with their tool_use blocks) into the feed mid-turn, so a still-running call rendered twice in lockstep: once from the feed, once from the streaming section (most visible as twin subagent panels with identical thinking). The streaming section now skips calls already present in the feed.
 - **Stop cancels pending steers instead of leaving them in limbo** — a steered prompt lives in the daemon's injection queue, not the prompt queue, so Stop's drain missed it: the chip sat "steering…" forever, never posting or clearing. Chips now carry the daemon prompt id, and Stop cancels every pending steer/interrupt daemon-side (best-effort) and drops the chips, with the notice saying what was cancelled.
 - **Steer chips admit when a subagent is in the way** — a running foreground subagent blocks steer injection until it finishes (the main agent hits no step boundary mid-call — a daemon limitation, not fixable app-side). The chip now reads "steering (after subagent finishes)…" so the wait has a visible cause; Stop remains the override.
+
+### Changed
+
+- **Verified against kimi-code 0.36.1** — isolated-daemon sweep (0.34.0 → 0.36.1, 10/10 live smoke): REST gains 7 routes (title generation, capabilities, plugins marketplace); session shapes gain `archived_at`, task items gain subagent identity fields; WS gains plugin/capability install-progress events. All additive, nothing removed, v1 surfaces byte-identical. Reference specs and generated types now track 0.36.1; no app changes required.
 
 ## v0.1.13
 

@@ -563,7 +563,6 @@ export interface paths {
                                 models?: {
                                     [key: string]: unknown;
                                 };
-                                secondary_model?: unknown;
                                 thinking?: unknown;
                                 plan_mode?: boolean;
                                 yolo?: boolean;
@@ -576,6 +575,8 @@ export interface paths {
                                 extra_skill_dirs?: string[];
                                 loop_control?: unknown;
                                 background?: unknown;
+                                subagent?: unknown;
+                                secondary_model?: unknown;
                                 experimental?: {
                                     [key: string]: boolean;
                                 };
@@ -611,7 +612,6 @@ export interface paths {
                         models?: {
                             [key: string]: unknown;
                         };
-                        secondary_model?: unknown;
                         thinking?: unknown;
                         plan_mode?: boolean;
                         yolo?: boolean;
@@ -624,6 +624,8 @@ export interface paths {
                         extra_skill_dirs?: string[];
                         loop_control?: unknown;
                         background?: unknown;
+                        subagent?: unknown;
+                        secondary_model?: unknown;
                         experimental?: {
                             [key: string]: boolean;
                         };
@@ -657,7 +659,6 @@ export interface paths {
                                 models?: {
                                     [key: string]: unknown;
                                 };
-                                secondary_model?: unknown;
                                 thinking?: unknown;
                                 plan_mode?: boolean;
                                 yolo?: boolean;
@@ -670,6 +671,8 @@ export interface paths {
                                 extra_skill_dirs?: string[];
                                 loop_control?: unknown;
                                 background?: unknown;
+                                subagent?: unknown;
+                                secondary_model?: unknown;
                                 experimental?: {
                                     [key: string]: boolean;
                                 };
@@ -1015,6 +1018,7 @@ export interface paths {
                                     /** @enum {string} */
                                     last_turn_reason?: "completed" | "cancelled" | "failed";
                                     archived?: boolean;
+                                    archived_at?: unknown;
                                     current_prompt_id?: string;
                                     last_prompt?: string;
                                     metadata: {
@@ -1151,6 +1155,7 @@ export interface paths {
                                 /** @enum {string} */
                                 last_turn_reason?: "completed" | "cancelled" | "failed";
                                 archived?: boolean;
+                                archived_at?: unknown;
                                 current_prompt_id?: string;
                                 last_prompt?: string;
                                 metadata: {
@@ -1281,6 +1286,7 @@ export interface paths {
                                 /** @enum {string} */
                                 last_turn_reason?: "completed" | "cancelled" | "failed";
                                 archived?: boolean;
+                                archived_at?: unknown;
                                 current_prompt_id?: string;
                                 last_prompt?: string;
                                 metadata: {
@@ -1405,6 +1411,7 @@ export interface paths {
                                 /** @enum {string} */
                                 last_turn_reason?: "completed" | "cancelled" | "failed";
                                 archived?: boolean;
+                                archived_at?: unknown;
                                 current_prompt_id?: string;
                                 last_prompt?: string;
                                 metadata: {
@@ -1554,6 +1561,7 @@ export interface paths {
                                 /** @enum {string} */
                                 last_turn_reason?: "completed" | "cancelled" | "failed";
                                 archived?: boolean;
+                                archived_at?: unknown;
                                 current_prompt_id?: string;
                                 last_prompt?: string;
                                 metadata: {
@@ -1634,6 +1642,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sessions/{session_id}/title/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Generate the session title via the managed chat_title tool */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        force?: boolean;
+                        /** @enum {string} */
+                        source?: "user_prompts" | "first_turn" | "digest";
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                title: string;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40401;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40923;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions/{session_id}/children": {
         parameters: {
             query?: never;
@@ -1682,6 +1761,7 @@ export interface paths {
                                     /** @enum {string} */
                                     last_turn_reason?: "completed" | "cancelled" | "failed";
                                     archived?: boolean;
+                                    archived_at?: unknown;
                                     current_prompt_id?: string;
                                     last_prompt?: string;
                                     metadata: {
@@ -1803,6 +1883,7 @@ export interface paths {
                                 /** @enum {string} */
                                 last_turn_reason?: "completed" | "cancelled" | "failed";
                                 archived?: boolean;
+                                archived_at?: unknown;
                                 current_prompt_id?: string;
                                 last_prompt?: string;
                                 metadata: {
@@ -2224,6 +2305,109 @@ export interface paths {
         put?: never;
         /** @description Activate a skill in a session (REST analogue of the /<skill> slash command) */
         post: operations["activateSkill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description List built-in capabilities with layered readiness status */
+        get: operations["listCapabilities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/capabilities/{capability_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get one capability readiness status */
+        get: operations["getCapability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/capabilities/{tail}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Start an idempotent capability install (poll GET for progress) */
+        post: operations["installCapability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plugins/marketplace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description List the plugin marketplace catalog merged with live install state */
+        get: operations["listPluginMarketplace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plugins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description List installed plugins */
+        get: operations["listPlugins"];
+        put?: never;
+        /** @description Install a plugin from a local path, zip URL, or GitHub repo */
+        post: operations["installPlugin"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plugins/{tail}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Enable, disable, or remove an installed plugin */
+        post: operations["pluginAction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2680,6 +2864,9 @@ export interface paths {
                                     output_bytes?: number;
                                     model?: string;
                                     thinking_effort?: string;
+                                    agent_id?: string;
+                                    subagent_type?: string;
+                                    parent_tool_call_id?: string;
                                 }[];
                             };
                             request_id: string;
@@ -2765,6 +2952,9 @@ export interface paths {
                                 output_bytes?: number;
                                 model?: string;
                                 thinking_effort?: string;
+                                agent_id?: string;
+                                subagent_type?: string;
+                                parent_tool_call_id?: string;
                             };
                             request_id: string;
                             details?: unknown;
@@ -4632,6 +4822,7 @@ export interface paths {
                                     /** @enum {string} */
                                     last_turn_reason?: "completed" | "cancelled" | "failed";
                                     archived?: boolean;
+                                    archived_at?: unknown;
                                     current_prompt_id?: string;
                                     last_prompt?: string;
                                     metadata: {
@@ -4795,10 +4986,11 @@ export interface paths {
                                     output_bytes?: number;
                                     model?: string;
                                     thinking_effort?: string;
-                                    /** @enum {string} */
-                                    subagent_phase?: "queued" | "working" | "suspended" | "completed" | "failed";
+                                    agent_id?: string;
                                     subagent_type?: string;
                                     parent_tool_call_id?: string;
+                                    /** @enum {string} */
+                                    subagent_phase?: "queued" | "working" | "suspended" | "completed" | "failed";
                                     suspended_reason?: string;
                                     swarm_index?: number;
                                     run_in_background?: boolean;
@@ -6441,6 +6633,7 @@ export interface paths {
                                         created_at: number;
                                         updated_at: number;
                                         archived: boolean;
+                                        archived_at: number | null;
                                     };
                                     activity: {
                                         /** @enum {string} */
@@ -7443,6 +7636,425 @@ export interface operations {
                     } | {
                         /** @enum {number} */
                         code: 40912;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    };
+                };
+            };
+        };
+    };
+    listCapabilities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {number} */
+                        code: 0;
+                        msg: string;
+                        data: {
+                            capabilities: {
+                                id: string;
+                                pluginId?: string;
+                                displayName: string;
+                                description: string;
+                                supported: boolean;
+                                /** @enum {string} */
+                                state: "not_installed" | "partial" | "ready" | "unsupported";
+                                version?: string;
+                                steps: {
+                                    id: string;
+                                    /** @enum {string} */
+                                    state: "ok" | "missing" | "failed";
+                                    detail?: string;
+                                    optional?: boolean;
+                                }[];
+                                install: {
+                                    running: boolean;
+                                    step?: string;
+                                    percent?: number;
+                                    error?: string;
+                                    note?: string;
+                                };
+                            }[];
+                        };
+                        request_id: string;
+                        details?: unknown;
+                    };
+                };
+            };
+        };
+    };
+    getCapability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                capability_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {number} */
+                        code: 0;
+                        msg: string;
+                        data: {
+                            id: string;
+                            pluginId?: string;
+                            displayName: string;
+                            description: string;
+                            supported: boolean;
+                            /** @enum {string} */
+                            state: "not_installed" | "partial" | "ready" | "unsupported";
+                            version?: string;
+                            steps: {
+                                id: string;
+                                /** @enum {string} */
+                                state: "ok" | "missing" | "failed";
+                                detail?: string;
+                                optional?: boolean;
+                            }[];
+                            install: {
+                                running: boolean;
+                                step?: string;
+                                percent?: number;
+                                error?: string;
+                                note?: string;
+                            };
+                        };
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40418;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    };
+                };
+            };
+        };
+    };
+    installCapability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tail: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {number} */
+                        code: 0;
+                        msg: string;
+                        data: {
+                            id: string;
+                            pluginId?: string;
+                            displayName: string;
+                            description: string;
+                            supported: boolean;
+                            /** @enum {string} */
+                            state: "not_installed" | "partial" | "ready" | "unsupported";
+                            version?: string;
+                            steps: {
+                                id: string;
+                                /** @enum {string} */
+                                state: "ok" | "missing" | "failed";
+                                detail?: string;
+                                optional?: boolean;
+                            }[];
+                            install: {
+                                running: boolean;
+                                step?: string;
+                                percent?: number;
+                                error?: string;
+                                note?: string;
+                            };
+                        };
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40001;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40418;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40924;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40925;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    };
+                };
+            };
+        };
+    };
+    listPluginMarketplace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {number} */
+                        code: 0;
+                        msg: string;
+                        data: {
+                            entries: {
+                                id: string;
+                                /** @enum {string} */
+                                tier: "official" | "curated" | "third-party";
+                                displayName: string;
+                                description?: string;
+                                homepage?: string;
+                                keywords?: string[];
+                                version?: string;
+                                source: string;
+                                installed?: {
+                                    version?: string;
+                                    enabled: boolean;
+                                };
+                                updateAvailable?: boolean;
+                                capabilityId?: string;
+                            }[];
+                        };
+                        request_id: string;
+                        details?: unknown;
+                    };
+                };
+            };
+        };
+    };
+    listPlugins: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {number} */
+                        code: 0;
+                        msg: string;
+                        data: {
+                            plugins: {
+                                id: string;
+                                displayName: string;
+                                version?: string;
+                                enabled: boolean;
+                                /** @enum {string} */
+                                state: "ok" | "error";
+                                skillCount: number;
+                                mcpServerCount: number;
+                                enabledMcpServerCount: number;
+                                hookCount: number;
+                                commandCount: number;
+                                hasErrors: boolean;
+                                /** @enum {string} */
+                                source: "local-path" | "zip-url" | "github";
+                                originalSource?: string;
+                                github?: {
+                                    owner: string;
+                                    repo: string;
+                                    ref: {
+                                        /** @enum {string} */
+                                        kind: "branch" | "tag" | "sha";
+                                        value: string;
+                                    };
+                                    installedSha?: string;
+                                };
+                            }[];
+                        };
+                        request_id: string;
+                        details?: unknown;
+                    };
+                };
+            };
+        };
+    };
+    installPlugin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    source: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {number} */
+                        code: 0;
+                        msg: string;
+                        data: {
+                            id: string;
+                            displayName: string;
+                            version?: string;
+                            enabled: boolean;
+                            /** @enum {string} */
+                            state: "ok" | "error";
+                            skillCount: number;
+                            mcpServerCount: number;
+                            enabledMcpServerCount: number;
+                            hookCount: number;
+                            commandCount: number;
+                            hasErrors: boolean;
+                            /** @enum {string} */
+                            source: "local-path" | "zip-url" | "github";
+                            originalSource?: string;
+                            github?: {
+                                owner: string;
+                                repo: string;
+                                ref: {
+                                    /** @enum {string} */
+                                    kind: "branch" | "tag" | "sha";
+                                    value: string;
+                                };
+                                installedSha?: string;
+                            };
+                        };
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40001;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40409;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    };
+                };
+            };
+        };
+    };
+    pluginAction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tail: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {number} */
+                        code: 0;
+                        msg: string;
+                        data: {
+                            /** @enum {boolean} */
+                            ok: true;
+                        };
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40001;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40419;
                         msg: string;
                         /** @enum {string|null} */
                         data: null;
