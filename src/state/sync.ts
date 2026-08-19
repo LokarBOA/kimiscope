@@ -829,6 +829,25 @@ export async function archiveSessions(ids: string[]): Promise<void> {
   await refreshSessions()
 }
 
+let v2RestoreUnsupported = false
+
+/** Restore an archived session (0.37+ `v2/sessions:restore`); one silent probe
+ *  on older daemons, then the button hides itself via the notice. */
+export async function restoreSession(id: string): Promise<void> {
+  if (v2RestoreUnsupported) {
+    useApp.getState().setNotice('unarchive needs kimi 0.37+')
+    return
+  }
+  try {
+    await post('/v2/sessions:restore', { ids: [id] })
+  } catch {
+    v2RestoreUnsupported = true
+    useApp.getState().setNotice('unarchive needs kimi 0.37+')
+    return
+  }
+  await refreshSessions()
+}
+
 /** Last prompt id per session — needed to abort app-initiated turns. */
 const lastPromptIds = new Map<string, string>()
 

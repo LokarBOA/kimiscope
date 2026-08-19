@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApp} from '../state/store'
 import { loadOlder } from '../state/sync'
-import { stripSystemEnvelopes } from '../state/sysmsg'
+import { extractSkillNames, stripSystemEnvelopes } from '../state/sysmsg'
 import type { ChatMessage, SubagentRecord, ToolCallRecord } from '../api/events'
 import { Markdown } from './Markdown'
 import { ThinkingBlock } from './ThinkingBlock'
@@ -61,6 +61,11 @@ function MessageView({
   const [copied, setCopied] = useState(false)
   if (msg.role === 'tool') return null // results render inside their tool card
   if (msg.compaction) return <CompactionCard msg={msg} />
+  // Skill chips are derived from the (stripped) skill-load envelopes in the
+  // raw text — so they survive history pulls and reloads, unlike live events.
+  const skillNames = (msg.content ?? [])
+    .filter((b) => b.type === 'text')
+    .flatMap((b) => extractSkillNames((b as { text: string }).text))
   const isUser = msg.role === 'user'
   // Runtime control-plane envelopes (system reminders, notifications) arrive as
   // user-role text — strip them; a message with nothing real left renders as nothing.
@@ -99,7 +104,7 @@ function MessageView({
     }
     return []
   })
-  if (blocks.length === 0) return null
+  if (blocks.length === 0 && skillNames.length === 0) return null
 
   const copyText = (msg.content ?? [])
     .filter((b) => b.type === 'text')
@@ -110,6 +115,20 @@ function MessageView({
   const plain = (msg.content ?? []).every((b) => b.type === 'text')
 
   return (
+    <>
+      {skillNames.length > 0 && (
+        <div className="flex justify-center gap-1.5">
+          {skillNames.map((n) => (
+            <span
+              key={n}
+              className="rounded-full border border-violet-800/50 bg-violet-950/20 px-2.5 py-0.5 text-[11px] text-violet-300/80"
+            >
+              ⚡ {n}
+            </span>
+          ))}
+        </div>
+      )}
+      {blocks.length > 0 && (
     <div className={isUser ? 'flex justify-end' : ''}>
       <div
         className={
@@ -134,6 +153,8 @@ function MessageView({
         {blocks}
       </div>
     </div>
+      )}
+    </>
   )
 }
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp, type Workspace } from '../state/store'
-import { archiveSession, archiveSessions, newSession, refreshSessions, renameSession, runSlashCommand, trustWorkspace, watchSession } from '../state/sync'
+import { archiveSession, archiveSessions, newSession, refreshSessions, renameSession, restoreSession, runSlashCommand, trustWorkspace, watchSession } from '../state/sync'
 import type { SessionSummary } from '../api/events'
 
 function timeAgo(iso: string): string {
@@ -123,7 +123,19 @@ function SessionRow({ s }: { s: SessionSummary }) {
           </span>
         )}
         {archived ? (
-          <span className="shrink-0 text-[10px] text-zinc-600 uppercase">archived</span>
+          <>
+            <span className="shrink-0 text-[10px] text-zinc-600 uppercase">archived</span>
+            <button
+              title="Restore from archive (kimi 0.37+)"
+              onClick={(e) => {
+                e.stopPropagation()
+                void restoreSession(s.id)
+              }}
+              className="shrink-0 rounded px-1 text-[11px] text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-700 hover:text-sky-300"
+            >
+              ↺
+            </button>
+          </>
         ) : (
           <>
             <button

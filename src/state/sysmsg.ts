@@ -19,3 +19,12 @@ export function stripSystemEnvelopes(text: string): string {
   for (const re of ENVELOPES) out = out.replace(re, '')
   return out.replace(/\n{3,}/g, '\n\n').trim()
 }
+
+const SKILL_ENVELOPE_RE = /<(?:kimi-)?skill-loaded\b[^>]*?\bname="([^"]+)"/g
+
+/** Skill names referenced by skill-load envelopes in a message (the envelope
+ *  text is stripped from display; this recovers the names for a render-side
+ *  chip that survives history pulls). */
+export function extractSkillNames(text: string): string[] {
+  return [...text.matchAll(SKILL_ENVELOPE_RE)].map((m) => m[1])
+}

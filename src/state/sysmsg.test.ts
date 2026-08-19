@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { stripSystemEnvelopes } from './sysmsg'
+import { extractSkillNames, stripSystemEnvelopes } from './sysmsg'
 
 describe('stripSystemEnvelopes', () => {
   it('leaves normal text untouched', () => {
@@ -56,5 +56,16 @@ describe('stripSystemEnvelopes', () => {
     expect(stripSystemEnvelopes(t)).toBe('')
     const mixed = `real question\n${t}`
     expect(stripSystemEnvelopes(mixed)).toBe('real question')
+  })
+
+  it('extracts skill names from envelopes for render-side chips', () => {
+    expect(extractSkillNames('plain text')).toEqual([])
+    expect(extractSkillNames('<skill-loaded name="harness-dev" trigger="model-tool">x</skill-loaded>')).toEqual([
+      'harness-dev',
+    ])
+    expect(extractSkillNames('<kimi-skill-loaded name="a"></kimi-skill-loaded> mid <skill-loaded name="b">y</skill-loaded>')).toEqual([
+      'a',
+      'b',
+    ])
   })
 })

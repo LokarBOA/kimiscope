@@ -21,6 +21,29 @@ interface FileHit {
 
 /** null = untested; false = daemon without /workspace/fs:search (≤0.30). */
 let fsSearchSupported: boolean | null = null
+/** null = untested; false = daemon without /workspace/fs:suggest (≤0.36). */
+let fsSuggestSupported: boolean | null = null
+
+/** File candidates for the @ picker: fs:suggest (0.37+, purpose-built for
+ *  completion) with fs:search as the older-daemon fallback. */
+function searchFiles(root: string, query: string): Promise<{ items?: FileHit[] }> {
+  const body = { workspace: root, query, limit: 10 }
+  if (fsSuggestSupported === false) {
+    return post<{ items?: FileHit[] }>('/workspace/fs:search', body)
+  }
+  return post<{ items?: FileHit[] }>('/workspace/fs:suggest', body)
+    .then((res) => {
+      fsSuggestSupported = true
+      return res
+    })
+    .catch((e) => {
+      if (fsSuggestSupported === null) {
+        fsSuggestSupported = false
+        return post<{ items?: FileHit[] }>('/workspace/fs:search', body)
+      }
+      throw e
+    })
+}
 
 /** The `@fragment` at the caret, if the caret is inside/at the end of one. */
 function atFragment(text: string, caret: number): { start: number; query: string } | null {
@@ -81,11 +104,7 @@ export function Composer({ sessionId }: { sessionId: string }) {
     const root = scope ? `${cwd.replace(/\\/g, '/')}/${scope}` : cwd
     const seq = ++atSeq.current
     const t = setTimeout(() => {
-      post<{ items?: FileHit[] }>('/workspace/fs:search', {
-        workspace: root,
-        query: name,
-        limit: 10,
-      })
+      searchFiles(root, name)
         .then((res) => {
           fsSearchSupported = true
           if (seq === atSeq.current) setAtResults(res.items ?? [])

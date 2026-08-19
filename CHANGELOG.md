@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## v0.1.15
+
+### Added
+
+- **Unarchive sessions (kimi 0.37+)** — archived rows in the sidebar gain a hover ↺ restore button, backed by the new `v2/sessions:restore` route. Older daemons get a one-line "needs 0.37+" notice instead.
+- **Skill chips in the feed** — when a skill loads, a small centered ⚡ chip marks it in the stream instead of vanishing silently with the stripped envelope. Derived from the envelope text, so chips survive history pulls and reloads.
+- **The @ picker uses `fs:suggest` on kimi 0.37+** — the purpose-built completion endpoint replaces the fs:search workaround (feature-detected; older daemons fall back to fs:search unchanged).
 
 ### Changed
 
