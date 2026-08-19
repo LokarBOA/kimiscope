@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Verified against kimi-code 0.37.2** — isolated-daemon sweep (0.36.1 → 0.37.2, clean-session smoke 12/12): REST gains runtime binding (`GET/POST /sessions/{id}/runtime` — per-session agent selection), session media (`/media/{file_id}` — attachments persist server-side), `workspace/fs:suggest`, and batch `v2/sessions:archive`/`:restore` (restore = unarchive, previously impossible). WS adds structured `skillActivations` records. All additive; no app changes required. Reference specs and generated types now track 0.37.2.
+
 ## v0.1.14
 
 ### Added

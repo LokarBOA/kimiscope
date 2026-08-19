@@ -1,0 +1,7 @@
+2026/08/16-21:55:49.926 711c Reusing MANIFEST C:\Users\kvand\Projects\KimiHarness\UserskvandAppDataLocalKimiHarnessedge-agent-profile\Default\IndexedDB\https_devicebind.ebay.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/08/16-21:55:49.926 711c Recovering log #3
+2026/08/16-21:55:49.927 711c Reusing old log C:\Users\kvand\Projects\KimiHarness\UserskvandAppDataLocalKimiHarnessedge-agent-profile\Default\IndexedDB\https_devicebind.ebay.com_0.indexeddb.leveldb/000003.log 
+2026/08/16-21:56:18.224 711c Level-0 table #5: started
+2026/08/16-21:56:18.226 711c Level-0 table #5: 1181 bytes OK
+2026/08/16-21:56:18.229 711c Delete type=0 #3
+2026/08/16-21:56:18.230 711c Manual compaction at level-0 from (begin) .. (end); will stop at (end)

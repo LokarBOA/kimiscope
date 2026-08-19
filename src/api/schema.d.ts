@@ -99,6 +99,7 @@ export interface paths {
                                 };
                                 /** @enum {string} */
                                 backend?: "v1" | "v2";
+                                web_title?: string;
                             };
                             request_id: string;
                             details?: unknown;
@@ -2203,6 +2204,132 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sessions/{session_id}/runtime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get the main agent runtime binding */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                workspace_id: string;
+                                runtime_id: string;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40401;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** @description Switch the main agent runtime binding */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        runtime_id: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                workspace_id: string;
+                                runtime_id: string;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40401;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40420;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40926;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions/{session_id}/export": {
         parameters: {
             query?: never;
@@ -2487,6 +2614,10 @@ export interface paths {
                                             /** @enum {string} */
                                             kind: "file";
                                             file_id: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "session_media";
+                                            file_id: string;
                                         };
                                     } | {
                                         /** @enum {string} */
@@ -2504,6 +2635,10 @@ export interface paths {
                                         } | {
                                             /** @enum {string} */
                                             kind: "file";
+                                            file_id: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "session_media";
                                             file_id: string;
                                         };
                                     } | {
@@ -2630,6 +2765,10 @@ export interface paths {
                                         /** @enum {string} */
                                         kind: "file";
                                         file_id: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "session_media";
+                                        file_id: string;
                                     };
                                 } | {
                                     /** @enum {string} */
@@ -2647,6 +2786,10 @@ export interface paths {
                                     } | {
                                         /** @enum {string} */
                                         kind: "file";
+                                        file_id: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "session_media";
                                         file_id: string;
                                     };
                                 } | {
@@ -4030,6 +4173,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sessions/{session_id}/media/{file_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Download session-canonical prompt media by file ID */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                    file_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": string;
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions/{session_id}/{tail}": {
         parameters: {
             query?: never;
@@ -4058,6 +4240,23 @@ export interface paths {
         put?: never;
         /** @description Search files in a workspace without a session. `workspace` accepts a registered workspace id or an absolute root (registered on the spot). */
         post: operations["workspaceFsSearch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/fs:suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Suggest file and directory completion candidates in a workspace without a session. `workspace` accepts a registered workspace id or an absolute root (registered on the spot). */
+        post: operations["workspaceFsSuggest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4552,6 +4751,7 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
+                        runtime_id?: string;
                         cwd?: string;
                         shell?: string;
                         cols?: number;
@@ -4910,6 +5110,10 @@ export interface paths {
                                                 /** @enum {string} */
                                                 kind: "file";
                                                 file_id: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind: "session_media";
+                                                file_id: string;
                                             };
                                         } | {
                                             /** @enum {string} */
@@ -4927,6 +5131,10 @@ export interface paths {
                                             } | {
                                                 /** @enum {string} */
                                                 kind: "file";
+                                                file_id: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind: "session_media";
                                                 file_id: string;
                                             };
                                         } | {
@@ -5298,6 +5506,10 @@ export interface paths {
                                     } | {
                                         /** @enum {string} */
                                         kind: "file";
+                                        fileId: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "session_media";
                                         fileId: string;
                                     };
                                     placeholder?: string;
@@ -5731,6 +5943,10 @@ export interface paths {
                                                     /** @enum {string} */
                                                     kind: "file";
                                                     fileId: string;
+                                                } | {
+                                                    /** @enum {string} */
+                                                    kind: "session_media";
+                                                    fileId: string;
                                                 };
                                                 placeholder?: string;
                                             }[];
@@ -6123,6 +6339,10 @@ export interface paths {
                                                 /** @enum {string} */
                                                 kind: "file";
                                                 fileId: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind: "session_media";
+                                                fileId: string;
                                             };
                                             placeholder?: string;
                                         };
@@ -6323,7 +6543,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description All turn-opening inputs ("user messages") of a session, grouped per agent: every turn with a defined prompt (real user text, user-slash skill/plugin commands, cron prompts — distinguish via origin). agent_id optional: present reads one agent, absent reads every rostered agent. Live sessions answer from the in-memory store (history backfill awaited per agent), cold sessions rebuild from the persisted wire records. Unpaginated; attachment entities referenced by the messages ride along (metadata only) */
+        /** @description All turn-opening inputs ("user messages") of a session, grouped per agent: every turn with a defined prompt (real user text, user-slash skill/plugin commands, cron prompts — distinguish via origin), plus attachment-only prompts projected with an empty prompt string. agent_id optional: present reads one agent, absent reads every rostered agent. Live sessions answer from the in-memory store (history backfill awaited per agent), cold sessions rebuild from the persisted wire records. Unpaginated; attachment entities referenced by the messages ride along (metadata only) */
         get: {
             parameters: {
                 query?: {
@@ -6403,6 +6623,10 @@ export interface paths {
                                         } | {
                                             /** @enum {string} */
                                             kind: "file";
+                                            fileId: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "session_media";
                                             fileId: string;
                                         };
                                         placeholder?: string;
@@ -6591,17 +6815,20 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description List sessions with domain-grouped metadata (workspace / meta / activity; git via include=git). Opaque-cursor pagination: page_token binds the first page’s query conditions. */
+        /** @description List sessions with domain-grouped metadata (workspace / meta / activity; git via include=git). Paginate with the opaque page_token (binds the first page’s query conditions) or with the stateless 1-based page parameter; every page carries total. fields=id,archived trims each item to the lightweight ids projection (select-all-matching flows; page_size ceiling relaxed to 10000). */
         get: {
             parameters: {
                 query?: {
                     "workspace.id"?: string | string[];
                     "activity.status"?: ("running" | "approval" | "question" | "failed" | "idle") | ("running" | "approval" | "question" | "failed" | "idle")[];
                     "meta.updated_after"?: number;
+                    "meta.updated_before"?: number;
                     "meta.archived"?: "true" | "false" | "all";
                     sort?: "meta.updated_at_desc" | "meta.updated_at_asc" | "meta.created_at_desc";
                     include?: string;
+                    fields?: string;
                     page_size?: number;
+                    page?: number;
                     page_token?: string;
                 };
                 header?: never;
@@ -6621,7 +6848,7 @@ export interface paths {
                             code: 0;
                             msg: string;
                             data: {
-                                items: {
+                                items: ({
                                     id: string;
                                     workspace: {
                                         id: string;
@@ -6648,7 +6875,11 @@ export interface paths {
                                             url: string;
                                         } | null;
                                     };
-                                }[];
+                                } | {
+                                    id: string;
+                                    archived: boolean;
+                                })[];
+                                total: number;
                                 has_more: boolean;
                                 next_page_token: string | null;
                             };
@@ -6680,6 +6911,148 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/sessions:archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Batch-archive sessions by id ({ ids }, ≤5000 unique). Per-item results — a missing session folds into its own item; cold sessions are patched without materialization. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        ids: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                results: {
+                                    id: string;
+                                    ok: boolean;
+                                    error?: {
+                                        code: number;
+                                        message: string;
+                                    };
+                                }[];
+                                succeeded: number;
+                                failed: number;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/sessions:restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Batch-restore sessions by id ({ ids }, ≤5000 unique). Per-item results — a missing session folds into its own item; cold sessions are patched without materialization. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        ids: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                results: {
+                                    id: string;
+                                    ok: boolean;
+                                    error?: {
+                                        code: number;
+                                        message: string;
+                                    };
+                                }[];
+                                succeeded: number;
+                                failed: number;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -7553,6 +7926,10 @@ export interface operations {
                             /** @enum {string} */
                             kind: "file";
                             file_id: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "session_media";
+                            file_id: string;
                         };
                     } | {
                         /** @enum {string} */
@@ -7570,6 +7947,10 @@ export interface operations {
                         } | {
                             /** @enum {string} */
                             kind: "file";
+                            file_id: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "session_media";
                             file_id: string;
                         };
                     } | {
@@ -8197,6 +8578,10 @@ export interface operations {
                                         /** @enum {string} */
                                         kind: "file";
                                         file_id: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "session_media";
+                                        file_id: string;
                                     };
                                 } | {
                                     /** @enum {string} */
@@ -8214,6 +8599,10 @@ export interface operations {
                                     } | {
                                         /** @enum {string} */
                                         kind: "file";
+                                        file_id: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "session_media";
                                         file_id: string;
                                     };
                                 } | {
@@ -8269,6 +8658,10 @@ export interface operations {
                                         /** @enum {string} */
                                         kind: "file";
                                         file_id: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "session_media";
+                                        file_id: string;
                                     };
                                 } | {
                                     /** @enum {string} */
@@ -8286,6 +8679,10 @@ export interface operations {
                                     } | {
                                         /** @enum {string} */
                                         kind: "file";
+                                        file_id: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "session_media";
                                         file_id: string;
                                     };
                                 } | {
@@ -8364,6 +8761,10 @@ export interface operations {
                             /** @enum {string} */
                             kind: "file";
                             file_id: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "session_media";
+                            file_id: string;
                         };
                     } | {
                         /** @enum {string} */
@@ -8381,6 +8782,10 @@ export interface operations {
                         } | {
                             /** @enum {string} */
                             kind: "file";
+                            file_id: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "session_media";
                             file_id: string;
                         };
                     } | {
@@ -8411,6 +8816,11 @@ export interface operations {
                     /** @enum {string} */
                     goal_control?: "pause" | "resume" | "cancel";
                     disabled_tools?: string[];
+                    prompt_id?: string;
+                    skills?: {
+                        name: string;
+                        args?: string;
+                    }[];
                 };
             };
         };
@@ -8463,6 +8873,10 @@ export interface operations {
                                     /** @enum {string} */
                                     kind: "file";
                                     file_id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "session_media";
+                                    file_id: string;
                                 };
                             } | {
                                 /** @enum {string} */
@@ -8480,6 +8894,10 @@ export interface operations {
                                 } | {
                                     /** @enum {string} */
                                     kind: "file";
+                                    file_id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "session_media";
                                     file_id: string;
                                 };
                             } | {
@@ -8559,12 +8977,36 @@ export interface operations {
                         details?: unknown;
                     } | {
                         /** @enum {number} */
+                        code: 40415;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
                         code: 40903;
                         msg: string;
                         data: {
                             /** @enum {boolean} */
                             aborted: false;
                         };
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40912;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40927;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
                         request_id: string;
                         details?: unknown;
                     };
@@ -9280,6 +9722,7 @@ export interface operations {
                     /** @default true */
                     follow_gitignore?: boolean;
                     workspace: string;
+                    runtime_id?: string;
                 };
             };
         };
@@ -9339,9 +9782,83 @@ export interface operations {
             };
         };
     };
-    downloadFile: {
+    workspaceFsSuggest: {
         parameters: {
             query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    query: string;
+                    /** @default 50 */
+                    limit?: number;
+                    /** @default true */
+                    follow_gitignore?: boolean;
+                    /** @default false */
+                    show_hidden?: boolean;
+                    include_globs?: string[];
+                    exclude_globs?: string[];
+                    workspace: string;
+                    runtime_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {number} */
+                        code: 0;
+                        msg: string;
+                        data: {
+                            items: {
+                                path: string;
+                                name: string;
+                                /** @enum {string} */
+                                kind: "file" | "directory" | "symlink";
+                                score: number;
+                                match_positions: number[];
+                            }[];
+                            truncated: boolean;
+                        };
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40001;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: {
+                            path: string;
+                            message: string;
+                        }[] | null;
+                    } | {
+                        /** @enum {number} */
+                        code: 40410;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    };
+                };
+            };
+        };
+    };
+    downloadFile: {
+        parameters: {
+            query?: {
+                runtime_id?: string;
+            };
             header?: never;
             path: {
                 session_id: string;
