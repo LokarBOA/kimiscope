@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.16
+
+### Fixed
+
+- **Packaged app survives daemon port moves** — the production CSP whitelisted only the daemon's *default* port (`127.0.0.1:58627`), so once a busy default made the daemon hop ports (normal 0.28+ behavior), the installed app couldn't fetch or open the socket at all — "Failed to fetch" / "connecting…" forever, while browser/dev builds worked fine. connect-src now allows any loopback port. AND the socket stops hammering a stale URL: after a few failed reconnect cycles it re-discovers the daemon (no spawn — just finds where it went) and re-points. This was the "app can't reach a healthy daemon" saga.
+
 ## v0.1.15
 
 ### Added

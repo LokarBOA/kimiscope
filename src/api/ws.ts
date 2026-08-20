@@ -11,6 +11,9 @@ export interface SocketHandlers {
   /** Fired when the socket drops and will reconnect — callers should resync. */
   onReset: () => void
   onStateChange?: (state: 'connecting' | 'open' | 'closed') => void
+  /** Fired on each failed reconnect cycle with the consecutive failure count —
+   *  the daemon may have moved ports (0.28+); callers re-discover after a few. */
+  onReconnectFail?: (failures: number) => void
 }
 
 let counter = 0
@@ -23,6 +26,7 @@ export class KimiSocket {
   private pending = new Map<string, PendingRequest>()
   private reconnectDelay = 500
   private closedByUser = false
+  private failCount = 0
   private clientId = `kimiscope_${Math.random().toString(36).slice(2, 10)}`
   private url: string
   private token: string
@@ -32,6 +36,16 @@ export class KimiSocket {
     this.url = url
     this.token = token
     this.handlers = handlers
+  }
+
+  /** Re-point the socket at a rediscovered daemon (port hops) and retry now. */
+  setConnection(url: string, token: string): void {
+    if (url === this.url && token === this.token) return
+    this.url = url
+    this.token = token
+    this.failCount = 0
+    this.reconnectDelay = 500
+    this.ws?.close()
   }
 
   private openWaiters: { resolve: () => void; reject: (e: Error) => void }[] = []
@@ -63,6 +77,7 @@ export class KimiSocket {
 
     ws.onopen = () => {
       this.reconnectDelay = 500
+      this.failCount = 0
       this.handlers.onStateChange?.('open')
       for (const w of this.openWaiters.splice(0)) w.resolve()
       this.request('client_hello', { client_id: this.clientId, subscriptions: [] }).catch(
@@ -99,6 +114,8 @@ export class KimiSocket {
       this.pending.clear()
       if (!this.closedByUser) {
         this.handlers.onReset()
+        this.failCount++
+        this.handlers.onReconnectFail?.(this.failCount)
         setTimeout(() => this.connect(), this.reconnectDelay)
         this.reconnectDelay = Math.min(this.reconnectDelay * 2, 15_000)
       }

@@ -27,3 +27,16 @@ export async function getConnectionInfo(force = false): Promise<ConnectionInfo> 
   }
   return cached
 }
+
+/** Re-discover the daemon WITHOUT spawning one — for socket reconnection after
+ *  a port hop. Returns null when nothing answers (or IPC is absent, e.g.
+ *  browser dev). */
+export async function rediscoverConnection(): Promise<ConnectionInfo | null> {
+  try {
+    const conn = await invoke<ConnectionInfo | null>('rediscover_connection')
+    if (conn) cached = conn
+    return conn
+  } catch {
+    return null
+  }
+}

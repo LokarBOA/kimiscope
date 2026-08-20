@@ -168,6 +168,26 @@ fn get_connection_info() -> Result<ConnectionInfo, String> {
   })
 }
 
+/// Discovery without side effects: never spawns a daemon (the caller is
+/// reconnecting an existing session and only wants to know where the daemon
+/// went). None when nothing answers.
+#[tauri::command]
+fn rediscover_connection() -> Option<ConnectionInfo> {
+  let home = kimi_home();
+  let port = discover_alive_port(&home)?;
+  let token = fs::read_to_string(home.join("server.token"))
+    .ok()
+    .map(|t| t.trim().to_string())
+    .filter(|t| !t.is_empty())?;
+  Some(ConnectionInfo {
+    base_url: format!("http://127.0.0.1:{port}"),
+    ws_url: format!("ws://127.0.0.1:{port}/api/v1/ws"),
+    token,
+    port,
+    spawned: false,
+  })
+}
+
 #[tauri::command]
 fn get_mcp_servers() -> Result<serde_json::Value, String> {
   let path = kimi_home().join("mcp.json");
@@ -390,6 +410,7 @@ pub fn run() {
     })
     .invoke_handler(tauri::generate_handler![
       get_connection_info,
+      rediscover_connection,
       get_mcp_servers,
       get_mcp_meta,
       set_mcp_enabled,

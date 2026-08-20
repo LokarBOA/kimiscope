@@ -1,5 +1,5 @@
 import { get, post, ApiError } from '../api/client'
-import { getConnectionInfo } from '../api/connection'
+import { getConnectionInfo, rediscoverConnection } from '../api/connection'
 import { notifyAttention } from '../api/notify'
 import { KimiSocket } from '../api/ws'
 import type {
@@ -94,6 +94,20 @@ export async function initApp(): Promise<void> {
           if (!useApp.getState().sessionState[id]?.synced) void watchSession(id)
         }
       }
+    },
+    onReconnectFail: (failures) => {
+      // The daemon may have moved ports while we were down (0.28+ takes the
+      // next free one); hammering a stale URL forever is how "connecting…"
+      // becomes permanent. After a few failures, rediscover (no spawn) and
+      // re-point the socket if the daemon turned up somewhere new.
+      if (failures < 4 || failures % 2 !== 0) return
+      void (async () => {
+        const conn = await rediscoverConnection()
+        if (conn && socket) {
+          socket.setConnection(conn.wsUrl, conn.token)
+          useApp.getState().setConnection(conn)
+        }
+      })()
     },
   })
   socket.connect()
