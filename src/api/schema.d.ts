@@ -100,6 +100,14 @@ export interface paths {
                                 /** @enum {string} */
                                 backend?: "v1" | "v2";
                                 web_title?: string;
+                                features?: {
+                                    name: string;
+                                    /** @enum {string} */
+                                    state: "Pending" | "Activating" | "Active" | "Unloading" | "Failed";
+                                    meta: {
+                                        [key: string]: unknown;
+                                    };
+                                }[];
                             };
                             request_id: string;
                             details?: unknown;
@@ -144,9 +152,8 @@ export interface paths {
                             code: 0;
                             msg: string;
                             data: {
-                                ready: boolean;
+                                models_ready: boolean;
                                 providers_count: number;
-                                default_model: string | null;
                                 managed_provider: {
                                     name: string;
                                     /** @enum {string} */
@@ -233,6 +240,8 @@ export interface paths {
                 content: {
                     "application/json": {
                         provider?: string;
+                        /** @enum {string} */
+                        region?: "mainland-cn" | "global";
                     };
                 };
             };
@@ -522,6 +531,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/oauth/region": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Resolve the client region (mainland-cn/global) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                /** @enum {string} */
+                                region: "mainland-cn" | "global";
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/config": {
         parameters: {
             query?: never;
@@ -585,6 +640,8 @@ export interface paths {
                                 raw?: {
                                     [key: string]: unknown;
                                 };
+                            } & {
+                                [key: string]: unknown;
                             };
                             request_id: string;
                             details?: unknown;
@@ -681,6 +738,8 @@ export interface paths {
                                 raw?: {
                                     [key: string]: unknown;
                                 };
+                            } & {
+                                [key: string]: unknown;
                             };
                             request_id: string;
                             details?: unknown;
@@ -1037,6 +1096,7 @@ export interface paths {
                                         permission_mode?: "manual" | "yolo" | "auto";
                                         plan_mode?: boolean;
                                         swarm_mode?: boolean;
+                                        tower_mode?: boolean;
                                         goal_objective?: string;
                                         /** @enum {string} */
                                         goal_control?: "pause" | "resume" | "cancel";
@@ -1046,10 +1106,10 @@ export interface paths {
                                         output_tokens: number;
                                         cache_read_tokens: number;
                                         cache_creation_tokens: number;
-                                        total_cost_usd: number;
+                                        total_cost_usd?: number;
                                         context_tokens: number;
-                                        context_limit: number;
-                                        turn_count: number;
+                                        context_limit?: number;
+                                        turn_count?: number;
                                     };
                                     permission_rules: {
                                         id: string;
@@ -1124,6 +1184,7 @@ export interface paths {
                             permission_mode?: "manual" | "yolo" | "auto";
                             plan_mode?: boolean;
                             swarm_mode?: boolean;
+                            tower_mode?: boolean;
                             goal_objective?: string;
                             /** @enum {string} */
                             goal_control?: "pause" | "resume" | "cancel";
@@ -1174,6 +1235,7 @@ export interface paths {
                                     permission_mode?: "manual" | "yolo" | "auto";
                                     plan_mode?: boolean;
                                     swarm_mode?: boolean;
+                                    tower_mode?: boolean;
                                     goal_objective?: string;
                                     /** @enum {string} */
                                     goal_control?: "pause" | "resume" | "cancel";
@@ -1183,10 +1245,10 @@ export interface paths {
                                     output_tokens: number;
                                     cache_read_tokens: number;
                                     cache_creation_tokens: number;
-                                    total_cost_usd: number;
+                                    total_cost_usd?: number;
                                     context_tokens: number;
-                                    context_limit: number;
-                                    turn_count: number;
+                                    context_limit?: number;
+                                    turn_count?: number;
                                 };
                                 permission_rules: {
                                     id: string;
@@ -1305,6 +1367,7 @@ export interface paths {
                                     permission_mode?: "manual" | "yolo" | "auto";
                                     plan_mode?: boolean;
                                     swarm_mode?: boolean;
+                                    tower_mode?: boolean;
                                     goal_objective?: string;
                                     /** @enum {string} */
                                     goal_control?: "pause" | "resume" | "cancel";
@@ -1314,10 +1377,10 @@ export interface paths {
                                     output_tokens: number;
                                     cache_read_tokens: number;
                                     cache_creation_tokens: number;
-                                    total_cost_usd: number;
+                                    total_cost_usd?: number;
                                     context_tokens: number;
-                                    context_limit: number;
-                                    turn_count: number;
+                                    context_limit?: number;
+                                    turn_count?: number;
                                 };
                                 permission_rules: {
                                     id: string;
@@ -1430,6 +1493,7 @@ export interface paths {
                                     permission_mode?: "manual" | "yolo" | "auto";
                                     plan_mode?: boolean;
                                     swarm_mode?: boolean;
+                                    tower_mode?: boolean;
                                     goal_objective?: string;
                                     /** @enum {string} */
                                     goal_control?: "pause" | "resume" | "cancel";
@@ -1439,10 +1503,10 @@ export interface paths {
                                     output_tokens: number;
                                     cache_read_tokens: number;
                                     cache_creation_tokens: number;
-                                    total_cost_usd: number;
+                                    total_cost_usd?: number;
                                     context_tokens: number;
-                                    context_limit: number;
-                                    turn_count: number;
+                                    context_limit?: number;
+                                    turn_count?: number;
                                 };
                                 permission_rules: {
                                     id: string;
@@ -1517,6 +1581,7 @@ export interface paths {
                             permission_mode?: "manual" | "yolo" | "auto";
                             plan_mode?: boolean;
                             swarm_mode?: boolean;
+                            tower_mode?: boolean;
                             goal_objective?: string;
                             /** @enum {string} */
                             goal_control?: "pause" | "resume" | "cancel";
@@ -1580,6 +1645,7 @@ export interface paths {
                                     permission_mode?: "manual" | "yolo" | "auto";
                                     plan_mode?: boolean;
                                     swarm_mode?: boolean;
+                                    tower_mode?: boolean;
                                     goal_objective?: string;
                                     /** @enum {string} */
                                     goal_control?: "pause" | "resume" | "cancel";
@@ -1589,10 +1655,10 @@ export interface paths {
                                     output_tokens: number;
                                     cache_read_tokens: number;
                                     cache_creation_tokens: number;
-                                    total_cost_usd: number;
+                                    total_cost_usd?: number;
                                     context_tokens: number;
-                                    context_limit: number;
-                                    turn_count: number;
+                                    context_limit?: number;
+                                    turn_count?: number;
                                 };
                                 permission_rules: {
                                     id: string;
@@ -1780,6 +1846,7 @@ export interface paths {
                                         permission_mode?: "manual" | "yolo" | "auto";
                                         plan_mode?: boolean;
                                         swarm_mode?: boolean;
+                                        tower_mode?: boolean;
                                         goal_objective?: string;
                                         /** @enum {string} */
                                         goal_control?: "pause" | "resume" | "cancel";
@@ -1789,10 +1856,10 @@ export interface paths {
                                         output_tokens: number;
                                         cache_read_tokens: number;
                                         cache_creation_tokens: number;
-                                        total_cost_usd: number;
+                                        total_cost_usd?: number;
                                         context_tokens: number;
-                                        context_limit: number;
-                                        turn_count: number;
+                                        context_limit?: number;
+                                        turn_count?: number;
                                     };
                                     permission_rules: {
                                         id: string;
@@ -1902,6 +1969,7 @@ export interface paths {
                                     permission_mode?: "manual" | "yolo" | "auto";
                                     plan_mode?: boolean;
                                     swarm_mode?: boolean;
+                                    tower_mode?: boolean;
                                     goal_objective?: string;
                                     /** @enum {string} */
                                     goal_control?: "pause" | "resume" | "cancel";
@@ -1911,10 +1979,10 @@ export interface paths {
                                     output_tokens: number;
                                     cache_read_tokens: number;
                                     cache_creation_tokens: number;
-                                    total_cost_usd: number;
+                                    total_cost_usd?: number;
                                     context_tokens: number;
-                                    context_limit: number;
-                                    turn_count: number;
+                                    context_limit?: number;
+                                    turn_count?: number;
                                 };
                                 permission_rules: {
                                     id: string;
@@ -2009,9 +2077,10 @@ export interface paths {
                                 permission: string;
                                 plan_mode: boolean;
                                 swarm_mode: boolean;
+                                tower_mode?: boolean;
                                 context_tokens: number;
                                 max_context_tokens?: number;
-                                context_usage: number;
+                                context_usage?: number;
                             };
                             request_id: string;
                             details?: unknown;
@@ -2618,6 +2687,10 @@ export interface paths {
                                             /** @enum {string} */
                                             kind: "session_media";
                                             file_id: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "path";
+                                            path: string;
                                         };
                                     } | {
                                         /** @enum {string} */
@@ -2640,14 +2713,19 @@ export interface paths {
                                             /** @enum {string} */
                                             kind: "session_media";
                                             file_id: string;
+                                        } | {
+                                            /** @enum {string} */
+                                            kind: "path";
+                                            path: string;
                                         };
                                     } | {
                                         /** @enum {string} */
                                         type: "file";
-                                        file_id: string;
-                                        name: string;
-                                        media_type: string;
-                                        size: number;
+                                        file_id?: string;
+                                        path?: string;
+                                        name?: string;
+                                        media_type?: string;
+                                        size?: number;
                                     } | {
                                         /** @enum {string} */
                                         type: "thinking";
@@ -2769,6 +2847,10 @@ export interface paths {
                                         /** @enum {string} */
                                         kind: "session_media";
                                         file_id: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "path";
+                                        path: string;
                                     };
                                 } | {
                                     /** @enum {string} */
@@ -2791,14 +2873,19 @@ export interface paths {
                                         /** @enum {string} */
                                         kind: "session_media";
                                         file_id: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "path";
+                                        path: string;
                                     };
                                 } | {
                                     /** @enum {string} */
                                     type: "file";
-                                    file_id: string;
-                                    name: string;
-                                    media_type: string;
-                                    size: number;
+                                    file_id?: string;
+                                    path?: string;
+                                    name?: string;
+                                    media_type?: string;
+                                    size?: number;
                                 } | {
                                     /** @enum {string} */
                                     type: "thinking";
@@ -3010,6 +3097,7 @@ export interface paths {
                                     agent_id?: string;
                                     subagent_type?: string;
                                     parent_tool_call_id?: string;
+                                    run_in_background: boolean;
                                 }[];
                             };
                             request_id: string;
@@ -3098,6 +3186,7 @@ export interface paths {
                                 agent_id?: string;
                                 subagent_type?: string;
                                 parent_tool_call_id?: string;
+                                run_in_background: boolean;
                             };
                             request_id: string;
                             details?: unknown;
@@ -3150,8 +3239,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Cancel a task */
-        post: operations["cancelTask"];
+        /** @description Run a task action */
+        post: operations["runTaskAction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4263,6 +4352,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/fs:suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Suggest file and directory completion candidates across one or more absolute root directories without a session or workspace. The first root is the primary root: its candidates are returned as relative paths, candidates under additional roots as absolute paths. Overlapping roots are deduplicated. No workspace registration or other side effects. */
+        post: operations["fsSuggest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions/{session_id}/fs/{*}": {
         parameters: {
             query?: never;
@@ -5040,6 +5146,7 @@ export interface paths {
                                         permission_mode?: "manual" | "yolo" | "auto";
                                         plan_mode?: boolean;
                                         swarm_mode?: boolean;
+                                        tower_mode?: boolean;
                                         goal_objective?: string;
                                         /** @enum {string} */
                                         goal_control?: "pause" | "resume" | "cancel";
@@ -5049,10 +5156,10 @@ export interface paths {
                                         output_tokens: number;
                                         cache_read_tokens: number;
                                         cache_creation_tokens: number;
-                                        total_cost_usd: number;
+                                        total_cost_usd?: number;
                                         context_tokens: number;
-                                        context_limit: number;
-                                        turn_count: number;
+                                        context_limit?: number;
+                                        turn_count?: number;
                                     };
                                     permission_rules: {
                                         id: string;
@@ -5114,6 +5221,10 @@ export interface paths {
                                                 /** @enum {string} */
                                                 kind: "session_media";
                                                 file_id: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind: "path";
+                                                path: string;
                                             };
                                         } | {
                                             /** @enum {string} */
@@ -5136,14 +5247,19 @@ export interface paths {
                                                 /** @enum {string} */
                                                 kind: "session_media";
                                                 file_id: string;
+                                            } | {
+                                                /** @enum {string} */
+                                                kind: "path";
+                                                path: string;
                                             };
                                         } | {
                                             /** @enum {string} */
                                             type: "file";
-                                            file_id: string;
-                                            name: string;
-                                            media_type: string;
-                                            size: number;
+                                            file_id?: string;
+                                            path?: string;
+                                            name?: string;
+                                            media_type?: string;
+                                            size?: number;
                                         } | {
                                             /** @enum {string} */
                                             type: "thinking";
@@ -5197,11 +5313,11 @@ export interface paths {
                                     agent_id?: string;
                                     subagent_type?: string;
                                     parent_tool_call_id?: string;
+                                    run_in_background?: boolean;
                                     /** @enum {string} */
                                     subagent_phase?: "queued" | "working" | "suspended" | "completed" | "failed";
                                     suspended_reason?: string;
                                     swarm_index?: number;
-                                    run_in_background?: boolean;
                                 }[];
                                 pending_approvals: {
                                     approval_id: string;
@@ -5361,6 +5477,7 @@ export interface paths {
                                             text: string;
                                             attachmentIds?: string[];
                                             taskId?: string;
+                                            promptIds?: string[];
                                         } | {
                                             /** @enum {string} */
                                             kind: "thinking";
@@ -5481,6 +5598,8 @@ export interface paths {
                                         inputCacheRead: number;
                                         inputCacheCreation: number;
                                     };
+                                    model?: string;
+                                    thinkingEffort?: string;
                                 }[];
                                 /** @default [] */
                                 interactions: {
@@ -5552,6 +5671,7 @@ export interface paths {
                                         swarm?: {
                                             trigger?: string;
                                         };
+                                        tower?: Record<string, never>;
                                     };
                                     /** @enum {string} */
                                     activity?: "idle" | "turn" | "disposing" | "unknown";
@@ -5798,6 +5918,7 @@ export interface paths {
                                                         text: string;
                                                         attachmentIds?: string[];
                                                         taskId?: string;
+                                                        promptIds?: string[];
                                                     } | {
                                                         /** @enum {string} */
                                                         kind: "thinking";
@@ -5917,6 +6038,8 @@ export interface paths {
                                                     inputCacheRead: number;
                                                     inputCacheCreation: number;
                                                 };
+                                                model?: string;
+                                                thinkingEffort?: string;
                                             }[];
                                             /** @default [] */
                                             interactions: {
@@ -5988,6 +6111,7 @@ export interface paths {
                                                     swarm?: {
                                                         trigger?: string;
                                                     };
+                                                    tower?: Record<string, never>;
                                                 };
                                                 /** @enum {string} */
                                                 activity?: "idle" | "turn" | "disposing" | "unknown";
@@ -6201,6 +6325,7 @@ export interface paths {
                                             text: string;
                                             attachmentIds?: string[];
                                             taskId?: string;
+                                            promptIds?: string[];
                                         } | {
                                             /** @enum {string} */
                                             kind: "thinking";
@@ -6309,6 +6434,8 @@ export interface paths {
                                                 inputCacheRead: number;
                                                 inputCacheCreation: number;
                                             };
+                                            model?: string;
+                                            thinkingEffort?: string;
                                         };
                                     } | {
                                         /** @enum {string} */
@@ -6382,7 +6509,7 @@ export interface paths {
                                                 completionCriterion?: string;
                                                 budgetUsed?: number;
                                                 budgetLimit?: number;
-                                            };
+                                            } | null;
                                             modes?: {
                                                 plan?: {
                                                     reviewPath?: string;
@@ -6391,6 +6518,7 @@ export interface paths {
                                                 swarm?: {
                                                     trigger?: string;
                                                 } | null;
+                                                tower?: Record<string, never> | null;
                                             };
                                             /** @enum {string} */
                                             activity?: "idle" | "turn" | "disposing" | "unknown";
@@ -6815,7 +6943,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description List sessions with domain-grouped metadata (workspace / meta / activity; git via include=git). Paginate with the opaque page_token (binds the first page’s query conditions) or with the stateless 1-based page parameter; every page carries total. fields=id,archived trims each item to the lightweight ids projection (select-all-matching flows; page_size ceiling relaxed to 10000). */
+        /** @description List sessions with domain-grouped metadata (workspace / meta / activity; git via include=git). activity.model carries the live session's bound model alias (null while the session is cold). Paginate with the opaque page_token (binds the first page’s query conditions) or with the stateless 1-based page parameter; every page carries total. fields=id,archived trims each item to the lightweight ids projection (select-all-matching flows; page_size ceiling relaxed to 10000). meta.has_prompt=true|false filters sessions by whether they carry a prompt. view=by_workspace groups the matching set per workspace — each group carries that workspace's first group.page_size sessions (default 5) under the requested sort plus the group's full matching total; page/page_token then page over groups. */
         get: {
             parameters: {
                 query?: {
@@ -6824,6 +6952,9 @@ export interface paths {
                     "meta.updated_after"?: number;
                     "meta.updated_before"?: number;
                     "meta.archived"?: "true" | "false" | "all";
+                    "meta.has_prompt"?: "true" | "false";
+                    view?: "flat" | "by_workspace";
+                    "group.page_size"?: number;
                     sort?: "meta.updated_at_desc" | "meta.updated_at_asc" | "meta.created_at_desc";
                     include?: string;
                     fields?: string;
@@ -6865,6 +6996,7 @@ export interface paths {
                                     activity: {
                                         /** @enum {string} */
                                         status: "running" | "approval" | "question" | "failed" | "idle";
+                                        model: string | null;
                                     };
                                     git?: {
                                         branch: string | null;
@@ -6879,6 +7011,49 @@ export interface paths {
                                     id: string;
                                     archived: boolean;
                                 })[];
+                                total: number;
+                                has_more: boolean;
+                                next_page_token: string | null;
+                            } | {
+                                groups: {
+                                    workspace: {
+                                        id: string;
+                                        cwd: string | null;
+                                    };
+                                    sessions: ({
+                                        id: string;
+                                        workspace: {
+                                            id: string;
+                                            cwd: string | null;
+                                        };
+                                        meta: {
+                                            title: string | null;
+                                            last_prompt: string | null;
+                                            created_at: number;
+                                            updated_at: number;
+                                            archived: boolean;
+                                            archived_at: number | null;
+                                        };
+                                        activity: {
+                                            /** @enum {string} */
+                                            status: "running" | "approval" | "question" | "failed" | "idle";
+                                            model: string | null;
+                                        };
+                                        git?: {
+                                            branch: string | null;
+                                            pull_request: {
+                                                number: number;
+                                                /** @enum {string} */
+                                                state: "open" | "closed" | "merged";
+                                                url: string;
+                                            } | null;
+                                        };
+                                    } | {
+                                        id: string;
+                                        archived: boolean;
+                                    })[];
+                                    total: number;
+                                }[];
                                 total: number;
                                 has_more: boolean;
                                 next_page_token: string | null;
@@ -7048,6 +7223,1349 @@ export interface paths {
                                 path: string;
                                 message: string;
                             }[] | null;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/mcp/servers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description List every MCP server the management plane knows about (user-level file, plugin manifests; project layers join when `cwd` is given). Read-only entries carry redacted configs. */
+        get: {
+            parameters: {
+                query?: {
+                    cwd?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                name: string;
+                                config: {
+                                    /** @enum {string} */
+                                    transport: "stdio";
+                                    command: string;
+                                    args?: string[];
+                                    env?: {
+                                        [key: string]: string;
+                                    };
+                                    cwd?: string;
+                                    /** @enum {string} */
+                                    executor?: "local" | "kaos";
+                                    runtime_id?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    envKeys?: string[];
+                                } | {
+                                    /** @enum {string} */
+                                    transport: "http";
+                                    /** Format: uri */
+                                    url: string;
+                                    headers?: {
+                                        [key: string]: string;
+                                    };
+                                    /** @enum {string} */
+                                    auth?: "oauth";
+                                    bearerTokenEnvVar?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    headerKeys?: string[];
+                                } | {
+                                    /** @enum {string} */
+                                    transport: "sse";
+                                    /** Format: uri */
+                                    url: string;
+                                    headers?: {
+                                        [key: string]: string;
+                                    };
+                                    /** @enum {string} */
+                                    auth?: "oauth";
+                                    bearerTokenEnvVar?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    headerKeys?: string[];
+                                };
+                                /** @enum {string} */
+                                source: "global" | "plugin" | "caller";
+                                origin: string;
+                                mutable: boolean;
+                                plugin?: {
+                                    id: string;
+                                    name: string;
+                                };
+                            }[];
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** @description Add a server to the user-level `mcp.json`; a same-named read-only entry (plugin / project layer) is rejected. Returns the refreshed list. */
+        post: {
+            parameters: {
+                query?: {
+                    cwd?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        transport: "stdio";
+                        command: string;
+                        args?: string[];
+                        env?: {
+                            [key: string]: string;
+                        };
+                        cwd?: string;
+                        /** @enum {string} */
+                        executor?: "local" | "kaos";
+                        runtime_id?: string;
+                        enabled?: boolean;
+                        startupTimeoutMs?: number;
+                        toolTimeoutMs?: number;
+                        enabledTools?: string[];
+                        disabledTools?: string[];
+                        name: string;
+                    } | {
+                        /** @enum {string} */
+                        transport: "http";
+                        /** Format: uri */
+                        url: string;
+                        headers?: {
+                            [key: string]: string;
+                        };
+                        /** @enum {string} */
+                        auth?: "oauth";
+                        bearerTokenEnvVar?: string;
+                        enabled?: boolean;
+                        startupTimeoutMs?: number;
+                        toolTimeoutMs?: number;
+                        enabledTools?: string[];
+                        disabledTools?: string[];
+                        name: string;
+                    } | {
+                        /** @enum {string} */
+                        transport: "sse";
+                        /** Format: uri */
+                        url: string;
+                        headers?: {
+                            [key: string]: string;
+                        };
+                        /** @enum {string} */
+                        auth?: "oauth";
+                        bearerTokenEnvVar?: string;
+                        enabled?: boolean;
+                        startupTimeoutMs?: number;
+                        toolTimeoutMs?: number;
+                        enabledTools?: string[];
+                        disabledTools?: string[];
+                        name: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                name: string;
+                                config: {
+                                    /** @enum {string} */
+                                    transport: "stdio";
+                                    command: string;
+                                    args?: string[];
+                                    env?: {
+                                        [key: string]: string;
+                                    };
+                                    cwd?: string;
+                                    /** @enum {string} */
+                                    executor?: "local" | "kaos";
+                                    runtime_id?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    envKeys?: string[];
+                                } | {
+                                    /** @enum {string} */
+                                    transport: "http";
+                                    /** Format: uri */
+                                    url: string;
+                                    headers?: {
+                                        [key: string]: string;
+                                    };
+                                    /** @enum {string} */
+                                    auth?: "oauth";
+                                    bearerTokenEnvVar?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    headerKeys?: string[];
+                                } | {
+                                    /** @enum {string} */
+                                    transport: "sse";
+                                    /** Format: uri */
+                                    url: string;
+                                    headers?: {
+                                        [key: string]: string;
+                                    };
+                                    /** @enum {string} */
+                                    auth?: "oauth";
+                                    bearerTokenEnvVar?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    headerKeys?: string[];
+                                };
+                                /** @enum {string} */
+                                source: "global" | "plugin" | "caller";
+                                origin: string;
+                                mutable: boolean;
+                                plugin?: {
+                                    id: string;
+                                    name: string;
+                                };
+                            }[];
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/mcp/servers/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get one MCP server by runtime name (`40408` when unknown). */
+        get: {
+            parameters: {
+                query?: {
+                    cwd?: string;
+                };
+                header?: never;
+                path: {
+                    name: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                name: string;
+                                config: {
+                                    /** @enum {string} */
+                                    transport: "stdio";
+                                    command: string;
+                                    args?: string[];
+                                    env?: {
+                                        [key: string]: string;
+                                    };
+                                    cwd?: string;
+                                    /** @enum {string} */
+                                    executor?: "local" | "kaos";
+                                    runtime_id?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    envKeys?: string[];
+                                } | {
+                                    /** @enum {string} */
+                                    transport: "http";
+                                    /** Format: uri */
+                                    url: string;
+                                    headers?: {
+                                        [key: string]: string;
+                                    };
+                                    /** @enum {string} */
+                                    auth?: "oauth";
+                                    bearerTokenEnvVar?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    headerKeys?: string[];
+                                } | {
+                                    /** @enum {string} */
+                                    transport: "sse";
+                                    /** Format: uri */
+                                    url: string;
+                                    headers?: {
+                                        [key: string]: string;
+                                    };
+                                    /** @enum {string} */
+                                    auth?: "oauth";
+                                    bearerTokenEnvVar?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    headerKeys?: string[];
+                                };
+                                /** @enum {string} */
+                                source: "global" | "plugin" | "caller";
+                                origin: string;
+                                mutable: boolean;
+                                plugin?: {
+                                    id: string;
+                                    name: string;
+                                };
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        } | {
+                            /** @enum {number} */
+                            code: 40408;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        /** @description Replace the user-level entry named in the path (the body carries no `name`); read-only entries reject the write. Returns the refreshed list. */
+        put: {
+            parameters: {
+                query?: {
+                    cwd?: string;
+                };
+                header?: never;
+                path: {
+                    name: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        transport: "stdio";
+                        command: string;
+                        args?: string[];
+                        env?: {
+                            [key: string]: string;
+                        };
+                        cwd?: string;
+                        /** @enum {string} */
+                        executor?: "local" | "kaos";
+                        runtime_id?: string;
+                        enabled?: boolean;
+                        startupTimeoutMs?: number;
+                        toolTimeoutMs?: number;
+                        enabledTools?: string[];
+                        disabledTools?: string[];
+                    } | {
+                        /** @enum {string} */
+                        transport: "http";
+                        /** Format: uri */
+                        url: string;
+                        headers?: {
+                            [key: string]: string;
+                        };
+                        /** @enum {string} */
+                        auth?: "oauth";
+                        bearerTokenEnvVar?: string;
+                        enabled?: boolean;
+                        startupTimeoutMs?: number;
+                        toolTimeoutMs?: number;
+                        enabledTools?: string[];
+                        disabledTools?: string[];
+                    } | {
+                        /** @enum {string} */
+                        transport: "sse";
+                        /** Format: uri */
+                        url: string;
+                        headers?: {
+                            [key: string]: string;
+                        };
+                        /** @enum {string} */
+                        auth?: "oauth";
+                        bearerTokenEnvVar?: string;
+                        enabled?: boolean;
+                        startupTimeoutMs?: number;
+                        toolTimeoutMs?: number;
+                        enabledTools?: string[];
+                        disabledTools?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                name: string;
+                                config: {
+                                    /** @enum {string} */
+                                    transport: "stdio";
+                                    command: string;
+                                    args?: string[];
+                                    env?: {
+                                        [key: string]: string;
+                                    };
+                                    cwd?: string;
+                                    /** @enum {string} */
+                                    executor?: "local" | "kaos";
+                                    runtime_id?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    envKeys?: string[];
+                                } | {
+                                    /** @enum {string} */
+                                    transport: "http";
+                                    /** Format: uri */
+                                    url: string;
+                                    headers?: {
+                                        [key: string]: string;
+                                    };
+                                    /** @enum {string} */
+                                    auth?: "oauth";
+                                    bearerTokenEnvVar?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    headerKeys?: string[];
+                                } | {
+                                    /** @enum {string} */
+                                    transport: "sse";
+                                    /** Format: uri */
+                                    url: string;
+                                    headers?: {
+                                        [key: string]: string;
+                                    };
+                                    /** @enum {string} */
+                                    auth?: "oauth";
+                                    bearerTokenEnvVar?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    headerKeys?: string[];
+                                };
+                                /** @enum {string} */
+                                source: "global" | "plugin" | "caller";
+                                origin: string;
+                                mutable: boolean;
+                                plugin?: {
+                                    id: string;
+                                    name: string;
+                                };
+                            }[];
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        } | {
+                            /** @enum {number} */
+                            code: 40408;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** @description Remove a user-level entry; read-only entries reject the delete. Returns the refreshed list. */
+        delete: {
+            parameters: {
+                query?: {
+                    cwd?: string;
+                };
+                header?: never;
+                path: {
+                    name: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                name: string;
+                                config: {
+                                    /** @enum {string} */
+                                    transport: "stdio";
+                                    command: string;
+                                    args?: string[];
+                                    env?: {
+                                        [key: string]: string;
+                                    };
+                                    cwd?: string;
+                                    /** @enum {string} */
+                                    executor?: "local" | "kaos";
+                                    runtime_id?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    envKeys?: string[];
+                                } | {
+                                    /** @enum {string} */
+                                    transport: "http";
+                                    /** Format: uri */
+                                    url: string;
+                                    headers?: {
+                                        [key: string]: string;
+                                    };
+                                    /** @enum {string} */
+                                    auth?: "oauth";
+                                    bearerTokenEnvVar?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    headerKeys?: string[];
+                                } | {
+                                    /** @enum {string} */
+                                    transport: "sse";
+                                    /** Format: uri */
+                                    url: string;
+                                    headers?: {
+                                        [key: string]: string;
+                                    };
+                                    /** @enum {string} */
+                                    auth?: "oauth";
+                                    bearerTokenEnvVar?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    headerKeys?: string[];
+                                };
+                                /** @enum {string} */
+                                source: "global" | "plugin" | "caller";
+                                origin: string;
+                                mutable: boolean;
+                                plugin?: {
+                                    id: string;
+                                    name: string;
+                                };
+                            }[];
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        } | {
+                            /** @enum {number} */
+                            code: 40408;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/mcp/servers:test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Probe a real connection to one server: pass `name` to test a registry entry (plugin and project layers included) or an inline `server` config to probe it as-is. Never persists anything. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        server?: {
+                            /** @enum {string} */
+                            transport: "stdio";
+                            command: string;
+                            args?: string[];
+                            env?: {
+                                [key: string]: string;
+                            };
+                            cwd?: string;
+                            /** @enum {string} */
+                            executor?: "local" | "kaos";
+                            runtime_id?: string;
+                            enabled?: boolean;
+                            startupTimeoutMs?: number;
+                            toolTimeoutMs?: number;
+                            enabledTools?: string[];
+                            disabledTools?: string[];
+                            name: string;
+                        } | {
+                            /** @enum {string} */
+                            transport: "http";
+                            /** Format: uri */
+                            url: string;
+                            headers?: {
+                                [key: string]: string;
+                            };
+                            /** @enum {string} */
+                            auth?: "oauth";
+                            bearerTokenEnvVar?: string;
+                            enabled?: boolean;
+                            startupTimeoutMs?: number;
+                            toolTimeoutMs?: number;
+                            enabledTools?: string[];
+                            disabledTools?: string[];
+                            name: string;
+                        } | {
+                            /** @enum {string} */
+                            transport: "sse";
+                            /** Format: uri */
+                            url: string;
+                            headers?: {
+                                [key: string]: string;
+                            };
+                            /** @enum {string} */
+                            auth?: "oauth";
+                            bearerTokenEnvVar?: string;
+                            enabled?: boolean;
+                            startupTimeoutMs?: number;
+                            toolTimeoutMs?: number;
+                            enabledTools?: string[];
+                            disabledTools?: string[];
+                            name: string;
+                        };
+                        cwd?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                success: boolean;
+                                output: string;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        } | {
+                            /** @enum {number} */
+                            code: 40408;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/mcp/servers:inspect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description The locator-addressed catalog (redacted configs) plus a batched real-connection probe of every OAuth candidate. `targets` narrows the catalog; omitted inspects all. `cwd` includes trusted project layers. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        targets?: ({
+                            /** @enum {string} */
+                            source: "global";
+                            name: string;
+                        } | {
+                            /** @enum {string} */
+                            source: "plugin";
+                            pluginId: string;
+                            serverName: string;
+                        })[];
+                        cwd?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                serverId: string;
+                                locator: {
+                                    /** @enum {string} */
+                                    source: "global";
+                                    name: string;
+                                } | {
+                                    /** @enum {string} */
+                                    source: "plugin";
+                                    pluginId: string;
+                                    serverName: string;
+                                };
+                                runtimeName: string;
+                                canonicalUrl?: string;
+                                /** @enum {string} */
+                                origin: "global" | "plugin" | "caller";
+                                config: {
+                                    /** @enum {string} */
+                                    transport: "stdio";
+                                    command: string;
+                                    args?: string[];
+                                    env?: {
+                                        [key: string]: string;
+                                    };
+                                    cwd?: string;
+                                    /** @enum {string} */
+                                    executor?: "local" | "kaos";
+                                    runtime_id?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    envKeys?: string[];
+                                } | {
+                                    /** @enum {string} */
+                                    transport: "http";
+                                    /** Format: uri */
+                                    url: string;
+                                    headers?: {
+                                        [key: string]: string;
+                                    };
+                                    /** @enum {string} */
+                                    auth?: "oauth";
+                                    bearerTokenEnvVar?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    headerKeys?: string[];
+                                } | {
+                                    /** @enum {string} */
+                                    transport: "sse";
+                                    /** Format: uri */
+                                    url: string;
+                                    headers?: {
+                                        [key: string]: string;
+                                    };
+                                    /** @enum {string} */
+                                    auth?: "oauth";
+                                    bearerTokenEnvVar?: string;
+                                    enabled?: boolean;
+                                    startupTimeoutMs?: number;
+                                    toolTimeoutMs?: number;
+                                    enabledTools?: string[];
+                                    disabledTools?: string[];
+                                    headerKeys?: string[];
+                                };
+                                enabled: boolean;
+                                editable: boolean;
+                                /** @enum {string} */
+                                authStatus: "not-applicable" | "bearer-token" | "oauth-required" | "oauth-authorized" | "oauth-expired" | "unavailable";
+                                checkedAt?: number;
+                                error?: string;
+                            }[];
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        } | {
+                            /** @enum {number} */
+                            code: 40408;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/mcp/auth-statuses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Per-server OAuth state over the registry catalog. Omitted `verify` preserves implicit OAuth detection; `verify=false` is fully offline; `verify=true` verifies every candidate. Probes may refresh or invalidate credentials. */
+        get: {
+            parameters: {
+                query?: {
+                    cwd?: string;
+                    verify?: "true" | "false";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                name: string;
+                                /** @enum {string} */
+                                authStatus: "not-applicable" | "bearer-token" | "oauth-required" | "oauth-authorized" | "oauth-expired" | "unavailable";
+                            }[];
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/mcp/auth:begin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Begin an interactive OAuth flow for a remote server. Answers `authorization-required` with the flow handle + URL, or `already-authorized` when a grant exists. */
+        post: {
+            parameters: {
+                query?: {
+                    cwd?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        source: "global";
+                        name: string;
+                    } | {
+                        /** @enum {string} */
+                        source: "plugin";
+                        pluginId: string;
+                        serverName: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                /** @enum {string} */
+                                status: "authorization-required";
+                                flowId: string;
+                                authorizationUrl: string;
+                            } | {
+                                /** @enum {string} */
+                                status: "already-authorized";
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        } | {
+                            /** @enum {number} */
+                            code: 40408;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40929;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/mcp/auth:complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Await the browser callback of a begun flow and finish the code exchange (`40001` for an unknown `flowId`). */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        flowId: string;
+                        timeoutMs?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        } | {
+                            /** @enum {number} */
+                            code: 40929;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/mcp/auth:cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Tear down a begun OAuth flow without finishing it; unknown flows are ignored. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        flowId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        } | {
+                            /** @enum {number} */
+                            code: 40929;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/mcp/auth:reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Clear the stored credentials of one server; the invalidation event reaches live sessions. */
+        post: {
+            parameters: {
+                query?: {
+                    cwd?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        source: "global";
+                        name: string;
+                    } | {
+                        /** @enum {string} */
+                        source: "plugin";
+                        pluginId: string;
+                        serverName: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        } | {
+                            /** @enum {number} */
+                            code: 40408;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40929;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
                         };
                     };
                 };
@@ -7930,6 +9448,10 @@ export interface operations {
                             /** @enum {string} */
                             kind: "session_media";
                             file_id: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "path";
+                            path: string;
                         };
                     } | {
                         /** @enum {string} */
@@ -7952,14 +9474,19 @@ export interface operations {
                             /** @enum {string} */
                             kind: "session_media";
                             file_id: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "path";
+                            path: string;
                         };
                     } | {
                         /** @enum {string} */
                         type: "file";
-                        file_id: string;
-                        name: string;
-                        media_type: string;
-                        size: number;
+                        file_id?: string;
+                        path?: string;
+                        name?: string;
+                        media_type?: string;
+                        size?: number;
                     })[];
                 };
             };
@@ -8446,7 +9973,7 @@ export interface operations {
             };
         };
     };
-    cancelTask: {
+    runTaskAction: {
         parameters: {
             query?: never;
             header?: never;
@@ -8471,6 +9998,10 @@ export interface operations {
                         data: {
                             /** @enum {boolean} */
                             cancelled: true;
+                        } | {
+                            detached: boolean;
+                            /** @enum {string} */
+                            status: "running" | "completed" | "failed" | "cancelled";
                         };
                         request_id: string;
                         details?: unknown;
@@ -8582,6 +10113,10 @@ export interface operations {
                                         /** @enum {string} */
                                         kind: "session_media";
                                         file_id: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "path";
+                                        path: string;
                                     };
                                 } | {
                                     /** @enum {string} */
@@ -8604,14 +10139,19 @@ export interface operations {
                                         /** @enum {string} */
                                         kind: "session_media";
                                         file_id: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "path";
+                                        path: string;
                                     };
                                 } | {
                                     /** @enum {string} */
                                     type: "file";
-                                    file_id: string;
-                                    name: string;
-                                    media_type: string;
-                                    size: number;
+                                    file_id?: string;
+                                    path?: string;
+                                    name?: string;
+                                    media_type?: string;
+                                    size?: number;
                                 } | {
                                     /** @enum {string} */
                                     type: "thinking";
@@ -8662,6 +10202,10 @@ export interface operations {
                                         /** @enum {string} */
                                         kind: "session_media";
                                         file_id: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "path";
+                                        path: string;
                                     };
                                 } | {
                                     /** @enum {string} */
@@ -8684,14 +10228,19 @@ export interface operations {
                                         /** @enum {string} */
                                         kind: "session_media";
                                         file_id: string;
+                                    } | {
+                                        /** @enum {string} */
+                                        kind: "path";
+                                        path: string;
                                     };
                                 } | {
                                     /** @enum {string} */
                                     type: "file";
-                                    file_id: string;
-                                    name: string;
-                                    media_type: string;
-                                    size: number;
+                                    file_id?: string;
+                                    path?: string;
+                                    name?: string;
+                                    media_type?: string;
+                                    size?: number;
                                 } | {
                                     /** @enum {string} */
                                     type: "thinking";
@@ -8765,6 +10314,10 @@ export interface operations {
                             /** @enum {string} */
                             kind: "session_media";
                             file_id: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "path";
+                            path: string;
                         };
                     } | {
                         /** @enum {string} */
@@ -8787,14 +10340,19 @@ export interface operations {
                             /** @enum {string} */
                             kind: "session_media";
                             file_id: string;
+                        } | {
+                            /** @enum {string} */
+                            kind: "path";
+                            path: string;
                         };
                     } | {
                         /** @enum {string} */
                         type: "file";
-                        file_id: string;
-                        name: string;
-                        media_type: string;
-                        size: number;
+                        file_id?: string;
+                        path?: string;
+                        name?: string;
+                        media_type?: string;
+                        size?: number;
                     } | {
                         /** @enum {string} */
                         type: "thinking";
@@ -8877,6 +10435,10 @@ export interface operations {
                                     /** @enum {string} */
                                     kind: "session_media";
                                     file_id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "path";
+                                    path: string;
                                 };
                             } | {
                                 /** @enum {string} */
@@ -8899,14 +10461,19 @@ export interface operations {
                                     /** @enum {string} */
                                     kind: "session_media";
                                     file_id: string;
+                                } | {
+                                    /** @enum {string} */
+                                    kind: "path";
+                                    path: string;
                                 };
                             } | {
                                 /** @enum {string} */
                                 type: "file";
-                                file_id: string;
-                                name: string;
-                                media_type: string;
-                                size: number;
+                                file_id?: string;
+                                path?: string;
+                                name?: string;
+                                media_type?: string;
+                                size?: number;
                             } | {
                                 /** @enum {string} */
                                 type: "thinking";
@@ -8970,6 +10537,14 @@ export interface operations {
                     } | {
                         /** @enum {number} */
                         code: 40401;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40407;
                         msg: string;
                         /** @enum {string|null} */
                         data: null;
@@ -9844,6 +11419,94 @@ export interface operations {
                     } | {
                         /** @enum {number} */
                         code: 40410;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    };
+                };
+            };
+        };
+    };
+    fsSuggest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    query: string;
+                    /** @default 50 */
+                    limit?: number;
+                    /** @default true */
+                    follow_gitignore?: boolean;
+                    /** @default false */
+                    show_hidden?: boolean;
+                    include_globs?: string[];
+                    exclude_globs?: string[];
+                    roots: string[];
+                    runtime_id?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Default Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {number} */
+                        code: 0;
+                        msg: string;
+                        data: {
+                            items: {
+                                path: string;
+                                name: string;
+                                /** @enum {string} */
+                                kind: "file" | "directory" | "symlink";
+                                score: number;
+                                match_positions: number[];
+                            }[];
+                            truncated: boolean;
+                        };
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40001;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: {
+                            path: string;
+                            message: string;
+                        }[] | null;
+                    } | {
+                        /** @enum {number} */
+                        code: 40409;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40420;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40926;
                         msg: string;
                         /** @enum {string|null} */
                         data: null;

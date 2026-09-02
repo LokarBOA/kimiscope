@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Verified against kimi-code 0.39.1** — isolated-daemon drill (spec jump 0.37.2 → 0.39.1, clean-session smoke 13/13): REST +11 routes (sessionless `fs:suggest`, `oauth/region`, and the `/api/v2/mcp/*` cluster — per-server inspect/test + OAuth re-auth flow). Only breaking surface is `GET /api/v1/auth` (`ready`/`default_model` → `models_ready`), which the app never calls. WS contract byte-identical; no new frame types observed. Everything else additive (`tower_mode` config, `v2/sessions` filters, `/meta` features/flags). Reference specs and generated types now track 0.39.1; no app changes required.
+
 ## v0.1.16
 
 ### Fixed
