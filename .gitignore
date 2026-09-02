@@ -43,4 +43,4 @@ src-tauri/target/
 .scratch-bh/
 
 # mangled-path browser profile junk (bad playwright user-data-dir artifacts)
-Userskvand*/
+Users*/
