@@ -551,3 +551,20 @@ describe('retry + subagent spawn fields (kimi 0.34)', () => {
     expect(sub.thinkingEffort).toBeUndefined()
   })
 })
+
+describe('turn changes (file history)', () => {
+  it('sets non-empty entries and removes them when emptied', () => {
+    useApp
+      .getState()
+      .setTurnChanges(SID, 2, [{ path: 'src/a.ts', status: 'modified', additions: 3, deletions: 1 }])
+    expect(useApp.getState().sessionState[SID].turnChanges[2]).toHaveLength(1)
+    // Other turns stay untouched.
+    useApp
+      .getState()
+      .setTurnChanges(SID, 3, [{ path: 'b.png', status: 'added', additions: 0, deletions: 0, binary: true }])
+    expect(Object.keys(useApp.getState().sessionState[SID].turnChanges)).toEqual(['2', '3'])
+    useApp.getState().setTurnChanges(SID, 2, [])
+    expect(useApp.getState().sessionState[SID].turnChanges[2]).toBeUndefined()
+    expect(useApp.getState().sessionState[SID].turnChanges[3]).toHaveLength(1)
+  })
+})

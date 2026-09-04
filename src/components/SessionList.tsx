@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp, type Workspace } from '../state/store'
-import { archiveSession, archiveSessions, newSession, refreshSessions, renameSession, restoreSession, runSlashCommand, trustWorkspace, watchSession } from '../state/sync'
+import { addWorkspaceDir, archiveSession, archiveSessions, newSession, refreshSessions, renameSession, restoreSession, runSlashCommand, trustWorkspace, watchSession } from '../state/sync'
+import { ApiError } from '../api/client'
 import type { SessionSummary } from '../api/events'
 
 function timeAgo(iso: string): string {
@@ -208,6 +209,33 @@ function SessionRow({ s }: { s: SessionSummary }) {
   )
 }
 
+/** Multi-root workspaces (kimi 0.40+): pick a folder and add it as an extra
+ *  root, persisted into the project's .kimi-code/local.toml. Result surfaces
+ *  as the composer-style notice line; older daemons get a version hint. */
+async function addFolderToWorkspace(workspaceId: string, name: string): Promise<void> {
+  const setNotice = useApp.getState().setNotice
+  let path: string | null = null
+  try {
+    const { open: pick } = await import('@tauri-apps/plugin-dialog')
+    const dir = await pick({ directory: true, title: 'Add a folder to this workspace' })
+    if (typeof dir === 'string') path = dir
+  } catch {
+    // No Tauri IPC (browser dev) — fall back to a typed path.
+    path = window.prompt('Folder path to add to this workspace:')?.trim() ?? null
+  }
+  if (!path) return
+  try {
+    const res = await addWorkspaceDir(workspaceId, path)
+    setNotice(`added ${path} to ${name}${res.persisted ? ' (persisted)' : ''}`)
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 40401) {
+      setNotice('add-folder needs kimi 0.40+')
+    } else {
+      setNotice(`add-folder failed: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+}
+
 function OpenFolder() {
   const [path, setPath] = useState('')
   const [open, setOpen] = useState(false)
@@ -395,6 +423,13 @@ export function SessionList() {
                     ⟳{bgTitles.length}
                   </span>
                 )}
+                <button
+                  onClick={() => workspace && void addFolderToWorkspace(id, workspace.name ?? id)}
+                  title="Add a folder to this workspace (multi-root, kimi 0.40+)"
+                  className="rounded px-1 text-[13px] text-zinc-600 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-zinc-800 hover:text-zinc-200"
+                >
+                  📂
+                </button>
                 <button
                   onClick={() => workspace && void newSession(workspace.root)}
                   title={`New session in ${workspace?.name ?? id}`}

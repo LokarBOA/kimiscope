@@ -71,7 +71,7 @@ export function transcriptToMessages(items: (TranscriptTurn | TranscriptMarker)[
     if (t.kind !== 'turn') continue
     const turn = t as TranscriptTurn
     if (turn.prompt) {
-      out.push({ id: turn.turnId, role: 'user', content: [{ type: 'text', text: turn.prompt }] })
+      out.push({ id: turn.turnId, role: 'user', turnId: turn.ordinal, content: [{ type: 'text', text: turn.prompt }] })
     }
     for (const s of turn.steps ?? []) {
       const content: ContentBlock[] = []
@@ -93,7 +93,7 @@ export function transcriptToMessages(items: (TranscriptTurn | TranscriptMarker)[
           }
         }
       }
-      if (content.length) out.push({ id: s.stepId, role: 'assistant', content })
+      if (content.length) out.push({ id: s.stepId, role: 'assistant', turnId: turn.ordinal, content })
     }
   }
   return out

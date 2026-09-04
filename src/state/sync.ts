@@ -14,8 +14,8 @@ import type {
   TaskItem,
 } from '../api/events'
 import { parseSlash, THINKING_LEVELS } from './commands'
-import { transcriptToMessages, type TranscriptPage } from './transcript'
-import { useApp, type ModelInfo, type PromptQueue, type Workspace } from './store'
+import { transcriptToMessages, type TranscriptPage, type TranscriptTurn } from './transcript'
+import { useApp, type FileChange, type ModelInfo, type PromptQueue, type Workspace } from './store'
 
 let socket: KimiSocket | null = null
 const watching = new Set<string>()
@@ -24,13 +24,17 @@ let queuePoll: ReturnType<typeof setInterval> | null = null
 
 interface Meta {
   server_version: string
+  experimental_flags?: Record<string, boolean>
 }
 
 /** Server version stamp — re-fetched on every socket (re)connect so a daemon
  *  restart (which drops the socket) updates the top bar without an app reload. */
 export async function refreshServerMeta(): Promise<void> {
   await get<Meta>('/meta')
-    .then((m) => useApp.getState().setServerVersion(m.server_version))
+    .then((m) => {
+      useApp.getState().setServerVersion(m.server_version)
+      useApp.getState().setExperimentalFlags(m.experimental_flags ?? null)
+    })
     .catch(() => {})
 }
 
@@ -251,6 +255,52 @@ export async function trustWorkspace(workspaceId: string): Promise<void> {
   }
 }
 
+export interface AddDirResult {
+  project_root: string
+  config_path: string
+  additional_dirs: string[]
+  persisted: boolean
+}
+
+/** Add an extra root folder to a workspace (0.40+ multi-root). Throws on
+ *  older daemons (40401) and validation errors — the caller surfaces them. */
+export async function addWorkspaceDir(workspaceId: string, path: string): Promise<AddDirResult> {
+  return post<AddDirResult>(`/workspaces/${workspaceId}/add-dir`, { path, persist: true })
+}
+
+/** Fetch one turn's file changes (0.40+ file_history experiment). The route
+ *  answers `{changes: [], enabled: false}` when the experiment is off, so a
+ *  negative flag check short-circuits first and errors are non-fatal. */
+export async function pullTurnChanges(sessionId: string, turnId: number): Promise<void> {
+  if (!useApp.getState().experimentalFlags?.file_history) return
+  try {
+    const res = await get<{ changes?: FileChange[]; enabled?: boolean; recorded?: boolean }>(
+      `/sessions/${sessionId}/file-history/changes?turn_id=${turnId}`,
+    )
+    const changes = res.changes ?? []
+    if (res.enabled && changes.length > 0) {
+      useApp.getState().setTurnChanges(sessionId, turnId, changes)
+    }
+  } catch (e) {
+    console.warn('turn changes pull failed', sessionId, turnId, e)
+  }
+}
+
+/** Before/after file snapshot for one path in one turn (0.40+ file_history).
+ *  `path` is the workspace-relative spelling exactly as /changes returns it;
+ *  null when the daemon recorded no checkpoint at that phase. */
+export async function getTurnFileContent(
+  sessionId: string,
+  turnId: number,
+  path: string,
+  phase: 'start' | 'end',
+): Promise<{ version: number; content?: string; binary?: boolean } | null> {
+  const res = await get<{ content: { version: number; content?: string; binary?: boolean } | null }>(
+    `/sessions/${sessionId}/file-history/content?turn_id=${turnId}&path=${encodeURIComponent(path)}&phase=${phase}`,
+  )
+  return res.content
+}
+
 function handleFrame(f: Frame) {
   if (f.type === 'resync_required') {
     const sid = (f.payload as { session_id?: string })?.session_id ?? f.session_id
@@ -265,6 +315,16 @@ function handleFrame(f: Frame) {
   // message splice and live deltas. Pull authoritative history at turn end and
   // after context rewrites (compaction), debounced across the end-of-turn burst.
   if (t === 'turn.ended' || t === 'prompt.completed') scheduleHistoryPull(f.session_id)
+  // Per-turn file-history chips (0.40 file_history experiment): turn.ended
+  // carries the 0-based turnId — fetch that turn's change list a beat after
+  // the daemon has flushed (same cadence as the history pull debounce).
+  if (t === 'turn.ended' && f.session_id) {
+    const p = f.payload as { turnId?: unknown; agentId?: string }
+    if ((p.agentId ?? 'main') === 'main' && typeof p.turnId === 'number') {
+      const turnId = p.turnId
+      setTimeout(() => void pullTurnChanges(f.session_id, turnId), 400)
+    }
+  }
   if (t === 'context.spliced' && (f.payload as { deleteCount?: number }).deleteCount) {
     scheduleHistoryPull(f.session_id)
   }
@@ -670,7 +730,19 @@ async function pullHistory(sessionId: string): Promise<void> {
     )
     // API returns newest-first; store chronologically.
     if (res.items?.length) {
-      useApp.getState().setMessages(sessionId, [...res.items].reverse(), Boolean(res.has_more))
+      const sess = useApp.getState().sessionState[sessionId]
+      const items = [...res.items].reverse()
+      // Tag messages arriving with this pull with the turn that produced them
+      // (turn.ended clears streaming.active but preserves streaming.turnId).
+      // Already-known ids keep whatever tag they had.
+      const lastTurn = sess?.streaming.turnId
+      if (typeof lastTurn === 'number') {
+        const prevIds = new Set((sess?.messages ?? []).map((m) => m.id))
+        for (const m of items) {
+          if (!prevIds.has(m.id) && m.turnId === undefined) m.turnId = lastTurn
+        }
+      }
+      useApp.getState().setMessages(sessionId, items, Boolean(res.has_more))
     }
   } catch (e) {
     console.error('history pull failed', sessionId, e)
@@ -693,6 +765,13 @@ async function pullTranscript(sessionId: string, beforeTurn?: string): Promise<b
       useApp.getState().setMessages(sessionId, messages, Boolean(res.has_more))
       useApp.getState().setHistorySource(sessionId, 'transcript')
       void pullPlans(sessionId)
+      // Backfill per-turn file-change chips for the newest turns on the page
+      // (0.40+ file_history; transcript ordinals share the turn_id numbering).
+      // transcriptToMessages already tagged the messages with turnId.
+      const ordinals = [
+        ...new Set(res.items.filter((i) => i.kind === 'turn').map((i) => (i as TranscriptTurn).ordinal)),
+      ].slice(-5)
+      void Promise.all(ordinals.map((o) => pullTurnChanges(sessionId, o)))
     }
     return true
   } catch (e) {

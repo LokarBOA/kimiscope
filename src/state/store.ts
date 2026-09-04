@@ -130,6 +130,9 @@ export interface SessionState {
   skills: SkillInfo[]
   /** Timestamp of the latest background-task completion (drives the sidebar badge). */
   recentTaskDone: number | null
+  /** Per-turn file changes (0.40+ file_history experiment), keyed by 0-based
+   *  turn id. Only turns WITH non-empty changes get an entry. */
+  turnChanges: Record<number, FileChange[]>
   /** Live: a compaction is running right now (compaction.started seen, no
    *  completion yet) — ChatView shows a transient "compacting context…" line. */
   compacting: boolean
@@ -169,6 +172,7 @@ const emptySession = (): SessionState => ({
   skills: [],
   recentTaskDone: null,
   compacting: false,
+  turnChanges: {},
 })
 
 /** A daemon-projection compaction summary arrives as a bare user-role message
@@ -242,6 +246,17 @@ export interface ModelInfo {
   capabilities: string[]
 }
 
+/** One file touched by a turn (0.40+ `file-history/changes`, behind the
+ *  `file_history` experiment). Paths are workspace-relative. */
+export interface FileChange {
+  path: string
+  status: 'added' | 'modified' | 'deleted'
+  additions: number
+  deletions: number
+  binary?: boolean
+  oversize?: boolean
+}
+
 export interface DraftImage {
   mediaType: string
   base64: string
@@ -259,6 +274,8 @@ interface AppState {
   conn: ConnectionInfo | null
   socketState: 'connecting' | 'open' | 'closed'
   serverVersion: string | null
+  /** `/meta` experimental flags (0.40+: e.g. `file_history`); null until fetched. */
+  experimentalFlags: Record<string, boolean> | null
   /** Non-fatal sync problem worth showing in the UI (e.g. subscribe failing). */
   syncIssue: string | null
   workspaces: Workspace[]
@@ -285,6 +302,7 @@ interface AppState {
   setConnection: (c: ConnectionInfo) => void
   setSocketState: (s: AppState['socketState']) => void
   setServerVersion: (v: string) => void
+  setExperimentalFlags: (f: Record<string, boolean> | null) => void
   setSyncIssue: (issue: string | null) => void
   setWorkspaces: (w: Workspace[]) => void
   setWorkspaceTrust: (id: string, trusted: boolean) => void
@@ -328,6 +346,7 @@ interface AppState {
   tagOutboxPromptId: (id: string, localId: string, promptId: string) => void
   setSkills: (id: string, skills: SkillInfo[]) => void
   setHistorySource: (id: string, source: 'daemon' | 'transcript') => void
+  setTurnChanges: (id: string, turnId: number, changes: FileChange[]) => void
   markTaskDone: (id: string) => void
 }
 
@@ -335,6 +354,7 @@ export const useApp = create<AppState>((set) => ({
   conn: null,
   socketState: 'connecting',
   serverVersion: null,
+  experimentalFlags: null,
   syncIssue: null,
   workspaces: [],
   workspaceTrust: {},
@@ -353,6 +373,7 @@ export const useApp = create<AppState>((set) => ({
   setConnection: (conn) => set({ conn }),
   setSocketState: (socketState) => set({ socketState }),
   setServerVersion: (serverVersion) => set({ serverVersion }),
+  setExperimentalFlags: (experimentalFlags) => set({ experimentalFlags }),
   setSyncIssue: (syncIssue) => set({ syncIssue }),
   setWorkspaces: (workspaces) => set({ workspaces }),
   setWorkspaceTrust: (id, trusted) =>
@@ -666,6 +687,18 @@ export const useApp = create<AppState>((set) => ({
         [id]: { ...(st.sessionState[id] ?? emptySession()), historySource },
       },
     })),
+
+  /** Record one turn's file changes; an empty array removes the entry. */
+  setTurnChanges: (id, turnId, changes) =>
+    set((st) => {
+      const prev = st.sessionState[id] ?? emptySession()
+      const turnChanges = { ...prev.turnChanges }
+      if (changes.length > 0) turnChanges[turnId] = changes
+      else delete turnChanges[turnId]
+      return {
+        sessionState: { ...st.sessionState, [id]: { ...prev, turnChanges } },
+      }
+    }),
 
   markTaskDone: (id) =>
     set((st) => ({

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, Fragment } from 'react'
 import { useApp} from '../state/store'
 import { loadOlder } from '../state/sync'
 import { extractSkillNames, stripSystemEnvelopes } from '../state/sysmsg'
@@ -7,6 +7,7 @@ import { Markdown } from './Markdown'
 import { ThinkingBlock } from './ThinkingBlock'
 import { ToolCard } from './ToolCard'
 import { TaskRow } from './InsightRail'
+import { TurnChanges } from './TurnChanges'
 
 /** Best-effort render source for a history image block (the daemon stores
  *  `source.kind: 'url'` with a data URL; live blocks may carry raw base64). */
@@ -230,6 +231,13 @@ export function ChatView({ sessionId }: { sessionId: string }) {
   const running = s.tasks.filter((t) => t.status === 'running')
   const backgroundBusy = !s.streaming.active && s.busy && !s.mainTurnActive && running.length > 0
 
+  // Last message index per turnId — a turn's file-changes chip renders once,
+  // under the final message that carries its tag.
+  const lastIdxByTurn = new Map<number, number>()
+  s.messages.forEach((m, i) => {
+    if (typeof m.turnId === 'number') lastIdxByTurn.set(m.turnId, i)
+  })
+
   return (
     <div
       ref={scrollRef}
@@ -286,9 +294,24 @@ export function ChatView({ sessionId }: { sessionId: string }) {
             </button>
           </div>
         )}
-        {s.messages.map((m) => (
-          <MessageView key={m.id} msg={m} toolCalls={s.toolCalls} subagents={s.subagents} plans={s.plans} />
-        ))}
+        {s.messages.map((m, i) => {
+          const chipTurn =
+            typeof m.turnId === 'number' && lastIdxByTurn.get(m.turnId) === i ? m.turnId : null
+          const chipChanges = chipTurn !== null ? s.turnChanges[chipTurn] : undefined
+          return (
+            <Fragment key={m.id}>
+              <MessageView msg={m} toolCalls={s.toolCalls} subagents={s.subagents} plans={s.plans} />
+              {chipTurn !== null && chipChanges && (
+                <TurnChanges
+                  key={`turnchip-${chipTurn}`}
+                  sessionId={sessionId}
+                  turnId={chipTurn}
+                  changes={chipChanges}
+                />
+              )}
+            </Fragment>
+          )
+        })}
 
         {s.compacting && (
           <div className="flex items-center gap-3 py-1 text-zinc-600">

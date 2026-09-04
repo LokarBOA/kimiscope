@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- **Per-turn file-changes chips (kimi 0.40+, `file_history` experiment)** — when the daemon records per-turn file history, a centered "◇ N files changed · +a −d" chip lands under each turn's last message; expanding it lists each file with its status glyph and line counts, and clicking a file lazily pulls the before/after snapshots (`file-history/content`) into an inline diff. Turn anchoring uses the 0-based turnId shared by WS frames, transcript ordinals, and the file-history routes. Daemons without the experiment (or older than 0.40) simply never show chips.
+- **Add a folder to a workspace (kimi 0.40+ multi-root)** — project group headers gain a hover 📂 button that picks a directory and posts it to `workspaces/{id}/add-dir` with `persist: true`, so the extra root lands in the project's `local.toml`. Result (or the daemon's error) surfaces as a notice; older daemons get a "needs kimi 0.40+" hint.
+
 ### Changed
 
 - **Verified against kimi-code 0.40.1** — isolated-daemon drill (0.39.1 → 0.40.1, clean-session smoke 13/13, new-route probes 6/6): REST +3 routes — per-turn **file history** (`file-history/changes` + `file-history/content`, per-turn diff data and before/after snapshots; behind the off-by-default `file_history` experiment) and **multi-root workspaces** (`workspaces/{id}/add-dir`). Additive fields: `tower_base`, transcript `triggerPromptId` + user-frame `origin.skillActivations`. WS byte-identical. One behavioral note: sockets that don't answer `ping` get starved of turn frames on 0.40 (the app already pongs — unaffected). Reference specs and generated types now track 0.40.1; no app changes required.

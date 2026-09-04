@@ -31,6 +31,10 @@ export interface ChatMessage {
    *  daemon-projection synthetic user message) — renders as a divider card
    *  with the summary behind a toggle, not as a user bubble. */
   compaction?: boolean
+  /** 0-based turn ordinal this message belongs to (transcript turns carry
+   *  `ordinal`; WS `turn.*` frames use the same numbering as `turnId`).
+   *  Anchors per-turn file-change chips. Untagged on compaction cards. */
+  turnId?: number
 }
 
 export interface ToolCallRecord {

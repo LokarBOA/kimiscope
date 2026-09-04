@@ -103,6 +103,22 @@ describe('transcriptToMessages', () => {
     })
   })
 
+  it('tags user/assistant messages with turnId = turn ordinal; markers stay untagged', () => {
+    const msgs = transcriptToMessages([
+      ...TURNS,
+      {
+        kind: 'marker',
+        markerId: 'm1',
+        marker: 'compaction',
+        payload: { text: 'working notes' },
+      },
+      { kind: 'turn', turnId: 't3', ordinal: 3, state: 'completed', prompt: 'later', steps: [] },
+    ])
+    // turnId anchors per-turn file-change chips (same numbering as WS turnId
+    // and file-history turn_id); compaction dividers must not carry one.
+    expect(msgs.map((m) => m.turnId)).toEqual([0, 0, undefined, 3])
+  })
+
   it('skips compaction markers with no summary text', () => {
     const msgs = transcriptToMessages([
       { kind: 'marker', markerId: 'm1', marker: 'compaction', payload: {} },
