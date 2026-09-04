@@ -1097,6 +1097,7 @@ export interface paths {
                                         plan_mode?: boolean;
                                         swarm_mode?: boolean;
                                         tower_mode?: boolean;
+                                        tower_base?: string;
                                         goal_objective?: string;
                                         /** @enum {string} */
                                         goal_control?: "pause" | "resume" | "cancel";
@@ -1185,6 +1186,7 @@ export interface paths {
                             plan_mode?: boolean;
                             swarm_mode?: boolean;
                             tower_mode?: boolean;
+                            tower_base?: string;
                             goal_objective?: string;
                             /** @enum {string} */
                             goal_control?: "pause" | "resume" | "cancel";
@@ -1236,6 +1238,7 @@ export interface paths {
                                     plan_mode?: boolean;
                                     swarm_mode?: boolean;
                                     tower_mode?: boolean;
+                                    tower_base?: string;
                                     goal_objective?: string;
                                     /** @enum {string} */
                                     goal_control?: "pause" | "resume" | "cancel";
@@ -1368,6 +1371,7 @@ export interface paths {
                                     plan_mode?: boolean;
                                     swarm_mode?: boolean;
                                     tower_mode?: boolean;
+                                    tower_base?: string;
                                     goal_objective?: string;
                                     /** @enum {string} */
                                     goal_control?: "pause" | "resume" | "cancel";
@@ -1494,6 +1498,7 @@ export interface paths {
                                     plan_mode?: boolean;
                                     swarm_mode?: boolean;
                                     tower_mode?: boolean;
+                                    tower_base?: string;
                                     goal_objective?: string;
                                     /** @enum {string} */
                                     goal_control?: "pause" | "resume" | "cancel";
@@ -1582,6 +1587,7 @@ export interface paths {
                             plan_mode?: boolean;
                             swarm_mode?: boolean;
                             tower_mode?: boolean;
+                            tower_base?: string;
                             goal_objective?: string;
                             /** @enum {string} */
                             goal_control?: "pause" | "resume" | "cancel";
@@ -1646,6 +1652,7 @@ export interface paths {
                                     plan_mode?: boolean;
                                     swarm_mode?: boolean;
                                     tower_mode?: boolean;
+                                    tower_base?: string;
                                     goal_objective?: string;
                                     /** @enum {string} */
                                     goal_control?: "pause" | "resume" | "cancel";
@@ -1847,6 +1854,7 @@ export interface paths {
                                         plan_mode?: boolean;
                                         swarm_mode?: boolean;
                                         tower_mode?: boolean;
+                                        tower_base?: string;
                                         goal_objective?: string;
                                         /** @enum {string} */
                                         goal_control?: "pause" | "resume" | "cancel";
@@ -1970,6 +1978,7 @@ export interface paths {
                                     plan_mode?: boolean;
                                     swarm_mode?: boolean;
                                     tower_mode?: boolean;
+                                    tower_base?: string;
                                     goal_objective?: string;
                                     /** @enum {string} */
                                     goal_control?: "pause" | "resume" | "cancel";
@@ -4045,6 +4054,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspace_id}/add-dir": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Add an additional directory to the workspace */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspace_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        path: string;
+                        persist?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                project_root: string;
+                                config_path: string;
+                                additional_dirs: string[];
+                                persisted: boolean;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        } | {
+                            /** @enum {number} */
+                            code: 40409;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40410;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/fs:browse": {
         parameters: {
             query?: never;
@@ -4773,6 +4866,136 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sessions/{session_id}/file-history/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description List one turn's file changes from the turn-level file history */
+        get: {
+            parameters: {
+                query: {
+                    turn_id: number;
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                changes: {
+                                    path: string;
+                                    /** @enum {string} */
+                                    status: "added" | "modified" | "deleted";
+                                    additions: number;
+                                    deletions: number;
+                                    binary?: boolean;
+                                    oversize?: boolean;
+                                }[];
+                                enabled: boolean;
+                                recorded: boolean;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40401;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/file-history/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description A file's content as captured at a turn's file-history checkpoint */
+        get: {
+            parameters: {
+                query: {
+                    turn_id: number;
+                    path: string;
+                    phase?: "start" | "end";
+                };
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                content: {
+                                    version: number;
+                                    content?: string;
+                                    binary?: boolean;
+                                } | null;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40401;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions/{session_id}/terminals": {
         parameters: {
             query?: never;
@@ -5147,6 +5370,7 @@ export interface paths {
                                         plan_mode?: boolean;
                                         swarm_mode?: boolean;
                                         tower_mode?: boolean;
+                                        tower_base?: string;
                                         goal_objective?: string;
                                         /** @enum {string} */
                                         goal_control?: "pause" | "resume" | "cancel";
@@ -5424,6 +5648,7 @@ export interface paths {
                                     /** @enum {string} */
                                     kind: "turn";
                                     turnId: string;
+                                    triggerPromptId?: string;
                                     ordinal: number;
                                     /** @enum {string} */
                                     state: "queued" | "running" | "completed" | "failed" | "cancelled";
@@ -5468,17 +5693,36 @@ export interface paths {
                                         ordinal: number;
                                         /** @enum {string} */
                                         state: "running" | "completed" | "interrupted" | "failed";
-                                        frames: ({
+                                        frames: (({
                                             /** @enum {string} */
                                             kind: "text";
                                             frameId: string;
-                                            /** @enum {string} */
-                                            role: "assistant" | "user";
                                             text: string;
                                             attachmentIds?: string[];
                                             taskId?: string;
                                             promptIds?: string[];
+                                            /** @enum {string} */
+                                            role: "assistant";
+                                            origin?: unknown;
                                         } | {
+                                            /** @enum {string} */
+                                            kind: "text";
+                                            frameId: string;
+                                            text: string;
+                                            attachmentIds?: string[];
+                                            taskId?: string;
+                                            promptIds?: string[];
+                                            /** @enum {string} */
+                                            role: "user";
+                                            origin?: {
+                                                /** @enum {string} */
+                                                kind: "user";
+                                                skillActivations?: {
+                                                    skillName: string;
+                                                    skillArgs?: string;
+                                                }[];
+                                            };
+                                        }) | {
                                             /** @enum {string} */
                                             kind: "thinking";
                                             frameId: string;
@@ -5865,6 +6109,7 @@ export interface paths {
                                                 /** @enum {string} */
                                                 kind: "turn";
                                                 turnId: string;
+                                                triggerPromptId?: string;
                                                 ordinal: number;
                                                 /** @enum {string} */
                                                 state: "queued" | "running" | "completed" | "failed" | "cancelled";
@@ -5909,17 +6154,36 @@ export interface paths {
                                                     ordinal: number;
                                                     /** @enum {string} */
                                                     state: "running" | "completed" | "interrupted" | "failed";
-                                                    frames: ({
+                                                    frames: (({
                                                         /** @enum {string} */
                                                         kind: "text";
                                                         frameId: string;
-                                                        /** @enum {string} */
-                                                        role: "assistant" | "user";
                                                         text: string;
                                                         attachmentIds?: string[];
                                                         taskId?: string;
                                                         promptIds?: string[];
+                                                        /** @enum {string} */
+                                                        role: "assistant";
+                                                        origin?: unknown;
                                                     } | {
+                                                        /** @enum {string} */
+                                                        kind: "text";
+                                                        frameId: string;
+                                                        text: string;
+                                                        attachmentIds?: string[];
+                                                        taskId?: string;
+                                                        promptIds?: string[];
+                                                        /** @enum {string} */
+                                                        role: "user";
+                                                        origin?: {
+                                                            /** @enum {string} */
+                                                            kind: "user";
+                                                            skillActivations?: {
+                                                                skillName: string;
+                                                                skillArgs?: string;
+                                                            }[];
+                                                        };
+                                                    }) | {
                                                         /** @enum {string} */
                                                         kind: "thinking";
                                                         frameId: string;
@@ -6223,6 +6487,7 @@ export interface paths {
                                             /** @enum {string} */
                                             kind: "turn";
                                             turnId: string;
+                                            triggerPromptId?: string;
                                             ordinal: number;
                                             /** @enum {string} */
                                             state: "queued" | "running" | "completed" | "failed" | "cancelled";
@@ -6316,17 +6581,36 @@ export interface paths {
                                         op: "frame.upsert";
                                         turnId: string;
                                         stepId: string;
-                                        frame: {
+                                        frame: ({
                                             /** @enum {string} */
                                             kind: "text";
                                             frameId: string;
-                                            /** @enum {string} */
-                                            role: "assistant" | "user";
                                             text: string;
                                             attachmentIds?: string[];
                                             taskId?: string;
                                             promptIds?: string[];
+                                            /** @enum {string} */
+                                            role: "assistant";
+                                            origin?: unknown;
                                         } | {
+                                            /** @enum {string} */
+                                            kind: "text";
+                                            frameId: string;
+                                            text: string;
+                                            attachmentIds?: string[];
+                                            taskId?: string;
+                                            promptIds?: string[];
+                                            /** @enum {string} */
+                                            role: "user";
+                                            origin?: {
+                                                /** @enum {string} */
+                                                kind: "user";
+                                                skillActivations?: {
+                                                    skillName: string;
+                                                    skillArgs?: string;
+                                                }[];
+                                            };
+                                        }) | {
                                             /** @enum {string} */
                                             kind: "thinking";
                                             frameId: string;

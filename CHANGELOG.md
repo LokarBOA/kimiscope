@@ -4,6 +4,8 @@
 
 ### Changed
 
+- **Verified against kimi-code 0.40.1** — isolated-daemon drill (0.39.1 → 0.40.1, clean-session smoke 13/13, new-route probes 6/6): REST +3 routes — per-turn **file history** (`file-history/changes` + `file-history/content`, per-turn diff data and before/after snapshots; behind the off-by-default `file_history` experiment) and **multi-root workspaces** (`workspaces/{id}/add-dir`). Additive fields: `tower_base`, transcript `triggerPromptId` + user-frame `origin.skillActivations`. WS byte-identical. One behavioral note: sockets that don't answer `ping` get starved of turn frames on 0.40 (the app already pongs — unaffected). Reference specs and generated types now track 0.40.1; no app changes required.
+
 - **Verified against kimi-code 0.39.1** — isolated-daemon drill (spec jump 0.37.2 → 0.39.1, clean-session smoke 13/13): REST +11 routes (sessionless `fs:suggest`, `oauth/region`, and the `/api/v2/mcp/*` cluster — per-server inspect/test + OAuth re-auth flow). Only breaking surface is `GET /api/v1/auth` (`ready`/`default_model` → `models_ready`), which the app never calls. WS contract byte-identical; no new frame types observed. Everything else additive (`tower_mode` config, `v2/sessions` filters, `/meta` features/flags). Reference specs and generated types now track 0.39.1; no app changes required.
 
 ## v0.1.16
