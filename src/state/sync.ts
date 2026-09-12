@@ -268,17 +268,31 @@ export async function addWorkspaceDir(workspaceId: string, path: string): Promis
   return post<AddDirResult>(`/workspaces/${workspaceId}/add-dir`, { path, persist: true })
 }
 
-/** Fetch one turn's file changes (0.40+ file_history experiment). The route
- *  answers `{changes: [], enabled: false}` when the experiment is off, so a
- *  negative flag check short-circuits first and errors are non-fatal. */
+/** Loose semver compare: true when `v` is at least `min` (numeric segments). */
+export function versionAtLeast(v: string | null, min: string): boolean {
+  if (!v) return false
+  const a = v.split('.').map((n) => parseInt(n, 10) || 0)
+  const b = min.split('.').map((n) => parseInt(n, 10) || 0)
+  for (let i = 0; i < 3; i++) {
+    if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) > (b[i] ?? 0)
+  }
+  return true
+}
+
+/** Fetch one turn's file changes (0.40+ file-history). Gating: 0.40 exposes a
+ *  `file_history` experimental flag; 0.41+ removed the flag and made turn file
+ *  history always-on. The 0.40 response carries `enabled:false` when off; 0.42
+ *  dropped the field entirely (and flipped `recorded` to mean "has data"), so
+ *  the only portable truth is a non-empty `changes` array. */
 export async function pullTurnChanges(sessionId: string, turnId: number): Promise<void> {
-  if (!useApp.getState().experimentalFlags?.file_history) return
+  const st = useApp.getState()
+  if (!st.experimentalFlags?.file_history && !versionAtLeast(st.serverVersion, '0.41.0')) return
   try {
     const res = await get<{ changes?: FileChange[]; enabled?: boolean; recorded?: boolean }>(
       `/sessions/${sessionId}/file-history/changes?turn_id=${turnId}`,
     )
     const changes = res.changes ?? []
-    if (res.enabled && changes.length > 0) {
+    if (res.enabled !== false && changes.length > 0) {
       useApp.getState().setTurnChanges(sessionId, turnId, changes)
     }
   } catch (e) {
@@ -905,6 +919,31 @@ export function stopSync(): void {
 /** Archive a session (soft-close; it disappears from the list). */
 export async function archiveSession(id: string): Promise<void> {
   await post(`/sessions/${id}:archive`)
+  watching.delete(id)
+  const st = useApp.getState()
+  if (st.activeSessionId === id) st.setActiveSession(null)
+  await refreshSessions()
+}
+
+let v2DeleteUnsupported = false
+
+/** Permanently delete a session (0.42+ `sessions/{id}:delete`) — unlike
+ *  archive, this is unrecoverable. One silent probe on older daemons. */
+export async function deleteSession(id: string): Promise<void> {
+  if (v2DeleteUnsupported) {
+    useApp.getState().setNotice('permanent delete needs kimi 0.42+')
+    return
+  }
+  try {
+    await post(`/sessions/${id}:delete`, {})
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 40401) {
+      v2DeleteUnsupported = true
+      useApp.getState().setNotice('permanent delete needs kimi 0.42+')
+      return
+    }
+    throw e
+  }
   watching.delete(id)
   const st = useApp.getState()
   if (st.activeSessionId === id) st.setActiveSession(null)

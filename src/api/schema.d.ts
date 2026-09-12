@@ -2701,6 +2701,7 @@ export interface paths {
                                             kind: "path";
                                             path: string;
                                         };
+                                        name?: string;
                                     } | {
                                         /** @enum {string} */
                                         type: "video";
@@ -2727,6 +2728,7 @@ export interface paths {
                                             kind: "path";
                                             path: string;
                                         };
+                                        name?: string;
                                     } | {
                                         /** @enum {string} */
                                         type: "file";
@@ -2861,6 +2863,7 @@ export interface paths {
                                         kind: "path";
                                         path: string;
                                     };
+                                    name?: string;
                                 } | {
                                     /** @enum {string} */
                                     type: "video";
@@ -2887,6 +2890,7 @@ export interface paths {
                                         kind: "path";
                                         path: string;
                                     };
+                                    name?: string;
                                 } | {
                                     /** @enum {string} */
                                     type: "file";
@@ -3659,6 +3663,122 @@ export interface paths {
         put?: never;
         /** @description Abort a running prompt or steer a queued prompt */
         post: operations["promptAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/remote-control": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Get the Remote Control tunnel status */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                enabled: boolean;
+                                /** @enum {string} */
+                                state: "off" | "starting" | "on" | "stopping";
+                                url?: string;
+                                device_id?: string;
+                                device_name?: string;
+                                error?: string;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** @description Start or stop the Remote Control tunnel */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        enabled: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                enabled: boolean;
+                                /** @enum {string} */
+                                state: "off" | "starting" | "on" | "stopping";
+                                url?: string;
+                                device_id?: string;
+                                device_name?: string;
+                                error?: string;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40928;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 50001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -4907,7 +5027,6 @@ export interface paths {
                                     binary?: boolean;
                                     oversize?: boolean;
                                 }[];
-                                enabled: boolean;
                                 recorded: boolean;
                             };
                             request_id: string;
@@ -5450,6 +5569,7 @@ export interface paths {
                                                 kind: "path";
                                                 path: string;
                                             };
+                                            name?: string;
                                         } | {
                                             /** @enum {string} */
                                             type: "video";
@@ -5476,6 +5596,7 @@ export interface paths {
                                                 kind: "path";
                                                 path: string;
                                             };
+                                            name?: string;
                                         } | {
                                             /** @enum {string} */
                                             type: "file";
@@ -5783,6 +5904,7 @@ export interface paths {
                                             llmServerFirstTokenMs?: number;
                                             llmServerDecodeMs?: number;
                                             llmClientConsumeMs?: number;
+                                            llmClientBlockedMs?: number;
                                         };
                                         retry?: {
                                             failedAttempt: number;
@@ -6244,6 +6366,7 @@ export interface paths {
                                                         llmServerFirstTokenMs?: number;
                                                         llmServerDecodeMs?: number;
                                                         llmClientConsumeMs?: number;
+                                                        llmClientBlockedMs?: number;
                                                     };
                                                     retry?: {
                                                         failedAttempt: number;
@@ -6563,6 +6686,7 @@ export interface paths {
                                                 llmServerFirstTokenMs?: number;
                                                 llmServerDecodeMs?: number;
                                                 llmClientConsumeMs?: number;
+                                                llmClientBlockedMs?: number;
                                             };
                                             retry?: {
                                                 failedAttempt: number;
@@ -9012,6 +9136,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sessions/{session_id}:delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Run a session action */
+        post: operations["runSessionDeleteAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -9737,6 +9878,7 @@ export interface operations {
                             kind: "path";
                             path: string;
                         };
+                        name?: string;
                     } | {
                         /** @enum {string} */
                         type: "video";
@@ -9763,6 +9905,7 @@ export interface operations {
                             kind: "path";
                             path: string;
                         };
+                        name?: string;
                     } | {
                         /** @enum {string} */
                         type: "file";
@@ -10402,6 +10545,7 @@ export interface operations {
                                         kind: "path";
                                         path: string;
                                     };
+                                    name?: string;
                                 } | {
                                     /** @enum {string} */
                                     type: "video";
@@ -10428,6 +10572,7 @@ export interface operations {
                                         kind: "path";
                                         path: string;
                                     };
+                                    name?: string;
                                 } | {
                                     /** @enum {string} */
                                     type: "file";
@@ -10491,6 +10636,7 @@ export interface operations {
                                         kind: "path";
                                         path: string;
                                     };
+                                    name?: string;
                                 } | {
                                     /** @enum {string} */
                                     type: "video";
@@ -10517,6 +10663,7 @@ export interface operations {
                                         kind: "path";
                                         path: string;
                                     };
+                                    name?: string;
                                 } | {
                                     /** @enum {string} */
                                     type: "file";
@@ -10603,6 +10750,7 @@ export interface operations {
                             kind: "path";
                             path: string;
                         };
+                        name?: string;
                     } | {
                         /** @enum {string} */
                         type: "video";
@@ -10629,6 +10777,7 @@ export interface operations {
                             kind: "path";
                             path: string;
                         };
+                        name?: string;
                     } | {
                         /** @enum {string} */
                         type: "file";
@@ -10724,6 +10873,7 @@ export interface operations {
                                     kind: "path";
                                     path: string;
                                 };
+                                name?: string;
                             } | {
                                 /** @enum {string} */
                                 type: "video";
@@ -10750,6 +10900,7 @@ export interface operations {
                                     kind: "path";
                                     path: string;
                                 };
+                                name?: string;
                             } | {
                                 /** @enum {string} */
                                 type: "file";
@@ -11987,6 +12138,50 @@ export interface operations {
                         data: {
                             /** @enum {boolean} */
                             archived: true;
+                        } | null;
+                        request_id: string;
+                        details?: unknown;
+                        stack?: string;
+                    };
+                };
+            };
+        };
+    };
+    runSessionDeleteAction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title?: string;
+                    metadata?: {
+                        [key: string]: unknown;
+                    };
+                    instruction?: string;
+                    count?: number;
+                    page_size?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Session delete response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: number;
+                        msg: string;
+                        data: {
+                            /** @enum {boolean} */
+                            deleted: true;
                         } | null;
                         request_id: string;
                         details?: unknown;

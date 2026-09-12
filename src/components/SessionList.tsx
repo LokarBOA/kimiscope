@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp, type Workspace } from '../state/store'
-import { addWorkspaceDir, archiveSession, archiveSessions, newSession, refreshSessions, renameSession, restoreSession, runSlashCommand, trustWorkspace, watchSession } from '../state/sync'
+import { addWorkspaceDir, archiveSession, archiveSessions, deleteSession, newSession, refreshSessions, renameSession, restoreSession, runSlashCommand, trustWorkspace, watchSession } from '../state/sync'
 import { ApiError } from '../api/client'
 import type { SessionSummary } from '../api/events'
 
@@ -195,6 +195,22 @@ function SessionRow({ s }: { s: SessionSummary }) {
                     className="block w-full px-3 py-1.5 text-left text-[12px] text-red-400/90 hover:bg-zinc-800"
                   >
                     ✕ Archive session
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setMenuOpen(false)
+                      const warn = busy ? '\n⚠ It is mid-turn — deleting cuts it off.' : ''
+                      if (
+                        window.confirm(
+                          `Permanently delete "${s.title || 'Untitled'}"?\nThis removes the session and its data — unlike archive, there is no restore.${warn}`,
+                        )
+                      )
+                        void deleteSession(s.id)
+                    }}
+                    className="block w-full px-3 py-1.5 text-left text-[12px] text-red-400/90 hover:bg-zinc-800"
+                  >
+                    🗑 Delete permanently
                   </button>
                 </div>
               )}

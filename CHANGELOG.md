@@ -1,13 +1,17 @@
 # Changelog
 
-## Unreleased
+## v0.1.17
 
 ### Added
 
 - **Per-turn file-changes chips (kimi 0.40+, `file_history` experiment)** — when the daemon records per-turn file history, a centered "◇ N files changed · +a −d" chip lands under each turn's last message; expanding it lists each file with its status glyph and line counts, and clicking a file lazily pulls the before/after snapshots (`file-history/content`) into an inline diff. Turn anchoring uses the 0-based turnId shared by WS frames, transcript ordinals, and the file-history routes. Daemons without the experiment (or older than 0.40) simply never show chips.
 - **Add a folder to a workspace (kimi 0.40+ multi-root)** — project group headers gain a hover 📂 button that picks a directory and posts it to `workspaces/{id}/add-dir` with `persist: true`, so the extra root lands in the project's `local.toml`. Result (or the daemon's error) surfaces as a notice; older daemons get a "needs kimi 0.40+" hint.
+- **Permanent session delete (kimi 0.42+)** — the session ⋯ menu gains "🗑 Delete permanently", backed by the new `sessions/{id}:delete` route with an explicit "no restore" confirmation (and a mid-turn warning). Older daemons get a "needs kimi 0.42+" notice.
 
 ### Changed
+
+- **Verified against kimi-code 0.42.0** — isolated-daemon drill (0.40.1 → 0.42.0, clean-session smoke 13/13, live file-history + delete probes): REST +2 (`remote-control` status/toggle, `sessions/{id}:delete`). Two real removals absorbed: `file-history/changes` dropped its `enabled` field and 0.41 removed the `file_history` flag (file history is now always-on) — the turn-chips gate now checks version ≥0.41 OR the 0.40 flag, and tolerates `enabled` being absent. WS: `watch_fs_*` message types removed upstream (never used here). Graduated experiments: secondary-model pool, remote control, minidb/search worker (all always-on now). Reference specs and generated types now track 0.42.0.
+- **Turn-chips gate fixed for kimi 0.41+** — on 0.41+ daemons the chips would never have appeared (flag removed); now version-gated, and attachment filenames (`name` on image/video blocks) flow through untouched.
 
 - **Verified against kimi-code 0.40.1** — isolated-daemon drill (0.39.1 → 0.40.1, clean-session smoke 13/13, new-route probes 6/6): REST +3 routes — per-turn **file history** (`file-history/changes` + `file-history/content`, per-turn diff data and before/after snapshots; behind the off-by-default `file_history` experiment) and **multi-root workspaces** (`workspaces/{id}/add-dir`). Additive fields: `tower_base`, transcript `triggerPromptId` + user-frame `origin.skillActivations`. WS byte-identical. One behavioral note: sockets that don't answer `ping` get starved of turn frames on 0.40 (the app already pongs — unaffected). Reference specs and generated types now track 0.40.1; no app changes required.
 
