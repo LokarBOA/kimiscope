@@ -550,6 +550,16 @@ describe('retry + subagent spawn fields (kimi 0.34)', () => {
     expect(sub.model).toBeUndefined()
     expect(sub.thinkingEffort).toBeUndefined()
   })
+
+  it('marks subagent.cancelled (kimi 2.0+) instead of leaving it running', () => {
+    const st = useApp.getState()
+    st.applyFrame(frame('turn.started', { agentId: 'main', turnId: 1 }))
+    st.applyFrame(
+      frame('subagent.spawned', { subagentId: 'sub3', subagentName: 'coder', runInBackground: true }),
+    )
+    st.applyFrame(frame('subagent.cancelled', { subagentId: 'sub3' }))
+    expect(useApp.getState().sessionState[SID].subagents.sub3.status).toBe('cancelled')
+  })
 })
 
 describe('turn changes (file history)', () => {

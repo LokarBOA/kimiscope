@@ -59,7 +59,7 @@ export interface SubagentRecord {
   /** 0.34+ spawn payload: the child's model/effort (absent on older daemons). */
   model?: string
   thinkingEffort?: string
-  status: 'running' | 'done'
+  status: 'running' | 'done' | 'cancelled'
   resultSummary?: string
   /** Live streaming buffers while the subagent works. */
   thinking?: string

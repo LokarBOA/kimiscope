@@ -406,36 +406,34 @@ export interface paths {
                             data: {
                                 /** @enum {string} */
                                 kind: "ok";
-                                summary: {
-                                    name?: string;
-                                    window?: {
-                                        duration: number;
-                                        /** @enum {string} */
-                                        unit: "minute" | "hour" | "day" | "week";
+                                quota: {
+                                    usages: {
+                                        limit5h?: {
+                                            usedRatio: number;
+                                            resetAt?: string;
+                                        };
+                                        limit7d?: {
+                                            usedRatio: number;
+                                            resetAt?: string;
+                                        };
+                                        monthTotal?: {
+                                            usedRatio: number;
+                                            resetAt?: string;
+                                        };
+                                        monthCode?: {
+                                            usedRatio: number;
+                                            resetAt?: string;
+                                        };
                                     };
-                                    used: number;
-                                    limit: number;
-                                    reset_at?: string;
-                                } | null;
-                                limits: {
-                                    name?: string;
-                                    window?: {
-                                        duration: number;
-                                        /** @enum {string} */
-                                        unit: "minute" | "hour" | "day" | "week";
-                                    };
-                                    used: number;
-                                    limit: number;
-                                    reset_at?: string;
-                                }[];
-                                extra_usage: {
-                                    balance_cents: number;
-                                    total_cents: number;
-                                    monthly_charge_limit_enabled: boolean;
-                                    monthly_charge_limit_cents: number;
-                                    monthly_used_cents: number;
-                                    currency: string;
-                                } | null;
+                                    extraUsage: {
+                                        balanceCents: number;
+                                        totalCents: number;
+                                        monthlyChargeLimitEnabled: boolean;
+                                        monthlyChargeLimitCents: number;
+                                        monthlyUsedCents: number;
+                                        currency: string;
+                                    } | null;
+                                };
                             } | {
                                 /** @enum {string} */
                                 kind: "error";
@@ -498,6 +496,7 @@ export interface paths {
                                     userLevelName: string;
                                     domain: number;
                                     domainName: string;
+                                    goodsVersion?: string;
                                     globalId?: string;
                                     bio?: string;
                                     avatar?: string;
@@ -611,6 +610,7 @@ export interface paths {
                                         type: string;
                                         base_url?: string;
                                         default_model?: string;
+                                        api_key_env?: string;
                                         has_api_key: boolean;
                                     };
                                 };
@@ -709,6 +709,7 @@ export interface paths {
                                         type: string;
                                         base_url?: string;
                                         default_model?: string;
+                                        api_key_env?: string;
                                         has_api_key: boolean;
                                     };
                                 };
@@ -865,6 +866,7 @@ export interface paths {
                                     type: string;
                                     base_url?: string;
                                     default_model?: string;
+                                    api_key_env?: string;
                                     has_api_key: boolean;
                                     /** @enum {string} */
                                     status: "connected" | "error" | "unconfigured";
@@ -879,7 +881,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** @description Create a provider manually (type + credentials + model list). When no global default_model is configured (fresh setup), it is seeded with the new provider default (or first) model; an existing default is never modified. */
+        /** @description Create a provider manually (type + credentials + model list). Credentials are either `api_key` (stored inline) or `api_key_env` (name of an environment variable to read the key from); they are mutually exclusive — submitting both fails validation. When no global default_model is configured (fresh setup), it is seeded with the new provider default (or first) model; an existing default is never modified. */
         post: operations["createProvider"];
         delete?: never;
         options?: never;
@@ -921,6 +923,7 @@ export interface paths {
                                 type: string;
                                 base_url?: string;
                                 default_model?: string;
+                                api_key_env?: string;
                                 has_api_key: boolean;
                                 /** @enum {string} */
                                 status: "connected" | "error" | "unconfigured";
@@ -950,7 +953,7 @@ export interface paths {
                 };
             };
         };
-        /** @description Replace a provider in one save (type + base_url + model list), optionally renaming it via `new_id` (the providers key, model aliases, default_provider and a default_model pointing at an old alias all migrate). `api_key` is tri-state: omitted keeps the stored key, "" clears it, any other value replaces it. The provider's model aliases are rebuilt from `models` — aliases no longer listed disappear from config.toml, other providers' aliases are untouched. Beyond the rename migration, the global default pointers are never modified. Answers 200 with `{provider}`. OAuth-managed providers are rejected: log out via /oauth/logout instead. */
+        /** @description Replace a provider in one save (type + base_url + model list), optionally renaming it via `new_id` (the providers key, model aliases, default_provider and a default_model pointing at an old alias all migrate). `api_key` is tri-state: omitted keeps the stored key, "" clears it, any other value replaces it. `api_key_env` (name of an environment variable to read the key from instead of storing it) is likewise tri-state and mutually exclusive with `api_key` — setting one clears the other, submitting both fails validation. The provider's model aliases are rebuilt from `models` — aliases no longer listed disappear from config.toml, other providers' aliases are untouched. Beyond the rename migration, the global default pointers are never modified. Answers 200 with `{provider}`. OAuth-managed providers are rejected: log out via /oauth/logout instead. */
         put: operations["replaceProvider"];
         post?: never;
         /** @description Delete a provider and all of its model aliases (204, no body). The global default_provider/default_model pointers are left untouched — they are the user's settings, not this endpoint's to garbage-collect. OAuth-managed providers are rejected: log out via /oauth/logout instead. */
@@ -3295,6 +3298,7 @@ export interface paths {
                                 items: {
                                     approval_id: string;
                                     session_id: string;
+                                    agent_id: string;
                                     turn_id?: number;
                                     tool_call_id: string;
                                     tool_name: string;
@@ -3471,6 +3475,7 @@ export interface paths {
                                 items: {
                                     question_id: string;
                                     session_id: string;
+                                    agent_id?: string;
                                     turn_id?: number;
                                     tool_call_id?: string;
                                     questions: {
@@ -5660,13 +5665,14 @@ export interface paths {
                                     parent_tool_call_id?: string;
                                     run_in_background?: boolean;
                                     /** @enum {string} */
-                                    subagent_phase?: "queued" | "working" | "suspended" | "completed" | "failed";
+                                    subagent_phase?: "queued" | "working" | "suspended" | "completed" | "failed" | "cancelled";
                                     suspended_reason?: string;
                                     swarm_index?: number;
                                 }[];
                                 pending_approvals: {
                                     approval_id: string;
                                     session_id: string;
+                                    agent_id: string;
                                     turn_id?: number;
                                     tool_call_id: string;
                                     tool_name: string;
@@ -5678,6 +5684,7 @@ export interface paths {
                                 pending_questions: {
                                     question_id: string;
                                     session_id: string;
+                                    agent_id?: string;
                                     turn_id?: number;
                                     tool_call_id?: string;
                                     questions: {
@@ -5838,9 +5845,22 @@ export interface paths {
                                             origin?: {
                                                 /** @enum {string} */
                                                 kind: "user";
+                                                clientMetadata?: {
+                                                    [key: string]: unknown;
+                                                }[];
                                                 skillActivations?: {
                                                     skillName: string;
                                                     skillArgs?: string;
+                                                }[];
+                                            } | {
+                                                /** @enum {string} */
+                                                kind: "skill_activation";
+                                                /** @enum {string} */
+                                                trigger: "user-slash";
+                                                skillName: string;
+                                                skillArgs?: string;
+                                                clientMetadata?: {
+                                                    [key: string]: unknown;
                                                 }[];
                                             };
                                         }) | {
@@ -6016,6 +6036,9 @@ export interface paths {
                                     status: "running" | "queued" | "blocked" | "completed" | "failed" | "aborted";
                                     userMessageId?: string;
                                     content?: unknown;
+                                    clientMetadata?: {
+                                        [key: string]: unknown;
+                                    }[];
                                     createdAt: string;
                                     finishedAt?: string;
                                     steeredAt?: string;
@@ -6080,17 +6103,6 @@ export interface paths {
                                             turnId: number;
                                             step: number;
                                             stepId: string;
-                                            since: number;
-                                        } | {
-                                            /** @enum {string} */
-                                            kind: "streaming";
-                                            turnId: number;
-                                            step: number;
-                                            stepId: string;
-                                            /** @enum {string} */
-                                            stream: "assistant" | "thinking" | "tool_call";
-                                            toolCallId?: string;
-                                            toolName?: string;
                                             since: number;
                                         } | {
                                             /** @enum {string} */
@@ -6300,9 +6312,22 @@ export interface paths {
                                                         origin?: {
                                                             /** @enum {string} */
                                                             kind: "user";
+                                                            clientMetadata?: {
+                                                                [key: string]: unknown;
+                                                            }[];
                                                             skillActivations?: {
                                                                 skillName: string;
                                                                 skillArgs?: string;
+                                                            }[];
+                                                        } | {
+                                                            /** @enum {string} */
+                                                            kind: "skill_activation";
+                                                            /** @enum {string} */
+                                                            trigger: "user-slash";
+                                                            skillName: string;
+                                                            skillArgs?: string;
+                                                            clientMetadata?: {
+                                                                [key: string]: unknown;
                                                             }[];
                                                         };
                                                     }) | {
@@ -6477,6 +6502,9 @@ export interface paths {
                                                 status: "running" | "queued" | "blocked" | "completed" | "failed" | "aborted";
                                                 userMessageId?: string;
                                                 content?: unknown;
+                                                clientMetadata?: {
+                                                    [key: string]: unknown;
+                                                }[];
                                                 createdAt: string;
                                                 finishedAt?: string;
                                                 steeredAt?: string;
@@ -6541,17 +6569,6 @@ export interface paths {
                                                         turnId: number;
                                                         step: number;
                                                         stepId: string;
-                                                        since: number;
-                                                    } | {
-                                                        /** @enum {string} */
-                                                        kind: "streaming";
-                                                        turnId: number;
-                                                        step: number;
-                                                        stepId: string;
-                                                        /** @enum {string} */
-                                                        stream: "assistant" | "thinking" | "tool_call";
-                                                        toolCallId?: string;
-                                                        toolName?: string;
                                                         since: number;
                                                     } | {
                                                         /** @enum {string} */
@@ -6729,9 +6746,22 @@ export interface paths {
                                             origin?: {
                                                 /** @enum {string} */
                                                 kind: "user";
+                                                clientMetadata?: {
+                                                    [key: string]: unknown;
+                                                }[];
                                                 skillActivations?: {
                                                     skillName: string;
                                                     skillArgs?: string;
+                                                }[];
+                                            } | {
+                                                /** @enum {string} */
+                                                kind: "skill_activation";
+                                                /** @enum {string} */
+                                                trigger: "user-slash";
+                                                skillName: string;
+                                                skillArgs?: string;
+                                                clientMetadata?: {
+                                                    [key: string]: unknown;
                                                 }[];
                                             };
                                         }) | {
@@ -6902,6 +6932,9 @@ export interface paths {
                                             status: "running" | "queued" | "blocked" | "completed" | "failed" | "aborted";
                                             userMessageId?: string;
                                             content?: unknown;
+                                            clientMetadata?: {
+                                                [key: string]: unknown;
+                                            }[];
                                             createdAt: string;
                                             finishedAt?: string;
                                             steeredAt?: string;
@@ -6969,17 +7002,6 @@ export interface paths {
                                                     turnId: number;
                                                     step: number;
                                                     stepId: string;
-                                                    since: number;
-                                                } | {
-                                                    /** @enum {string} */
-                                                    kind: "streaming";
-                                                    turnId: number;
-                                                    step: number;
-                                                    stepId: string;
-                                                    /** @enum {string} */
-                                                    stream: "assistant" | "thinking" | "tool_call";
-                                                    toolCallId?: string;
-                                                    toolName?: string;
                                                     since: number;
                                                 } | {
                                                     /** @enum {string} */
@@ -7686,6 +7708,7 @@ export interface paths {
                                     executor?: "local" | "kaos";
                                     runtime_id?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -7703,6 +7726,7 @@ export interface paths {
                                     auth?: "oauth";
                                     bearerTokenEnvVar?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -7720,6 +7744,7 @@ export interface paths {
                                     auth?: "oauth";
                                     bearerTokenEnvVar?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -7779,6 +7804,7 @@ export interface paths {
                         executor?: "local" | "kaos";
                         runtime_id?: string;
                         enabled?: boolean;
+                        deferred?: boolean;
                         startupTimeoutMs?: number;
                         toolTimeoutMs?: number;
                         enabledTools?: string[];
@@ -7796,6 +7822,7 @@ export interface paths {
                         auth?: "oauth";
                         bearerTokenEnvVar?: string;
                         enabled?: boolean;
+                        deferred?: boolean;
                         startupTimeoutMs?: number;
                         toolTimeoutMs?: number;
                         enabledTools?: string[];
@@ -7813,6 +7840,7 @@ export interface paths {
                         auth?: "oauth";
                         bearerTokenEnvVar?: string;
                         enabled?: boolean;
+                        deferred?: boolean;
                         startupTimeoutMs?: number;
                         toolTimeoutMs?: number;
                         enabledTools?: string[];
@@ -7847,6 +7875,7 @@ export interface paths {
                                     executor?: "local" | "kaos";
                                     runtime_id?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -7864,6 +7893,7 @@ export interface paths {
                                     auth?: "oauth";
                                     bearerTokenEnvVar?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -7881,6 +7911,7 @@ export interface paths {
                                     auth?: "oauth";
                                     bearerTokenEnvVar?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -7966,6 +7997,7 @@ export interface paths {
                                     executor?: "local" | "kaos";
                                     runtime_id?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -7983,6 +8015,7 @@ export interface paths {
                                     auth?: "oauth";
                                     bearerTokenEnvVar?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -8000,6 +8033,7 @@ export interface paths {
                                     auth?: "oauth";
                                     bearerTokenEnvVar?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -8068,6 +8102,7 @@ export interface paths {
                         executor?: "local" | "kaos";
                         runtime_id?: string;
                         enabled?: boolean;
+                        deferred?: boolean;
                         startupTimeoutMs?: number;
                         toolTimeoutMs?: number;
                         enabledTools?: string[];
@@ -8084,6 +8119,7 @@ export interface paths {
                         auth?: "oauth";
                         bearerTokenEnvVar?: string;
                         enabled?: boolean;
+                        deferred?: boolean;
                         startupTimeoutMs?: number;
                         toolTimeoutMs?: number;
                         enabledTools?: string[];
@@ -8100,6 +8136,7 @@ export interface paths {
                         auth?: "oauth";
                         bearerTokenEnvVar?: string;
                         enabled?: boolean;
+                        deferred?: boolean;
                         startupTimeoutMs?: number;
                         toolTimeoutMs?: number;
                         enabledTools?: string[];
@@ -8133,6 +8170,7 @@ export interface paths {
                                     executor?: "local" | "kaos";
                                     runtime_id?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -8150,6 +8188,7 @@ export interface paths {
                                     auth?: "oauth";
                                     bearerTokenEnvVar?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -8167,6 +8206,7 @@ export interface paths {
                                     auth?: "oauth";
                                     bearerTokenEnvVar?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -8248,6 +8288,7 @@ export interface paths {
                                     executor?: "local" | "kaos";
                                     runtime_id?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -8265,6 +8306,7 @@ export interface paths {
                                     auth?: "oauth";
                                     bearerTokenEnvVar?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -8282,6 +8324,7 @@ export interface paths {
                                     auth?: "oauth";
                                     bearerTokenEnvVar?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -8362,6 +8405,7 @@ export interface paths {
                             executor?: "local" | "kaos";
                             runtime_id?: string;
                             enabled?: boolean;
+                            deferred?: boolean;
                             startupTimeoutMs?: number;
                             toolTimeoutMs?: number;
                             enabledTools?: string[];
@@ -8379,6 +8423,7 @@ export interface paths {
                             auth?: "oauth";
                             bearerTokenEnvVar?: string;
                             enabled?: boolean;
+                            deferred?: boolean;
                             startupTimeoutMs?: number;
                             toolTimeoutMs?: number;
                             enabledTools?: string[];
@@ -8396,6 +8441,7 @@ export interface paths {
                             auth?: "oauth";
                             bearerTokenEnvVar?: string;
                             enabled?: boolean;
+                            deferred?: boolean;
                             startupTimeoutMs?: number;
                             toolTimeoutMs?: number;
                             enabledTools?: string[];
@@ -8527,6 +8573,7 @@ export interface paths {
                                     executor?: "local" | "kaos";
                                     runtime_id?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -8544,6 +8591,7 @@ export interface paths {
                                     auth?: "oauth";
                                     bearerTokenEnvVar?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -8561,6 +8609,7 @@ export interface paths {
                                     auth?: "oauth";
                                     bearerTokenEnvVar?: string;
                                     enabled?: boolean;
+                                    deferred?: boolean;
                                     startupTimeoutMs?: number;
                                     toolTimeoutMs?: number;
                                     enabledTools?: string[];
@@ -9235,6 +9284,7 @@ export interface operations {
                     /** @enum {string} */
                     type: "kimi" | "openai" | "openai_responses" | "anthropic" | "google-genai" | "vertexai";
                     api_key?: string;
+                    api_key_env?: string;
                     base_url?: string;
                     default_model?: string;
                     models: {
@@ -9265,6 +9315,7 @@ export interface operations {
                             type: string;
                             base_url?: string;
                             default_model?: string;
+                            api_key_env?: string;
                             has_api_key: boolean;
                             /** @enum {string} */
                             status: "connected" | "error" | "unconfigured";
@@ -9309,6 +9360,7 @@ export interface operations {
                     /** @enum {string} */
                     type: "kimi" | "openai" | "openai_responses" | "anthropic" | "google-genai" | "vertexai";
                     api_key?: string;
+                    api_key_env?: string;
                     base_url?: string;
                     default_model?: string;
                     models: {
@@ -9340,6 +9392,7 @@ export interface operations {
                                 type: string;
                                 base_url?: string;
                                 default_model?: string;
+                                api_key_env?: string;
                                 has_api_key: boolean;
                                 /** @enum {string} */
                                 status: "connected" | "error" | "unconfigured";
@@ -9497,6 +9550,7 @@ export interface operations {
                                 type: string;
                                 base_url?: string;
                                 default_model?: string;
+                                api_key_env?: string;
                                 has_api_key: boolean;
                                 /** @enum {string} */
                                 status: "connected" | "error" | "unconfigured";
@@ -9509,12 +9563,16 @@ export interface operations {
                                 type: string;
                                 base_url?: string;
                                 default_model?: string;
+                                api_key_env?: string;
                                 has_api_key: boolean;
                                 /** @enum {string} */
                                 status: "connected" | "error" | "unconfigured";
                                 models?: string[];
                             }[];
                             models_imported: number;
+                            credential_env?: {
+                                [key: string]: string;
+                            };
                         };
                         request_id: string;
                         details?: unknown;
@@ -9653,6 +9711,7 @@ export interface operations {
                                 name: string;
                                 /** @enum {string|null} */
                                 wire_type: "kimi" | "openai" | "openai_responses" | "anthropic" | "google-genai" | "vertexai" | null;
+                                base_url: string | null;
                                 guessed: boolean;
                                 needs_base_url: boolean;
                                 rejected: boolean;
@@ -9708,6 +9767,7 @@ export interface operations {
                             name: string;
                             /** @enum {string|null} */
                             wire_type: "kimi" | "openai" | "openai_responses" | "anthropic" | "google-genai" | "vertexai" | null;
+                            base_url: string | null;
                             guessed: boolean;
                             needs_base_url: boolean;
                             rejected: boolean;
@@ -9774,6 +9834,7 @@ export interface operations {
                                 source: "project" | "user" | "extra" | "builtin";
                                 type?: string;
                                 disable_model_invocation?: boolean;
+                                scopes?: ("tui" | "web")[];
                             }[];
                         };
                         request_id: string;
@@ -9821,6 +9882,7 @@ export interface operations {
                                 source: "project" | "user" | "extra" | "builtin";
                                 type?: string;
                                 disable_model_invocation?: boolean;
+                                scopes?: ("tui" | "web")[];
                             }[];
                         };
                         request_id: string;
@@ -9852,7 +9914,14 @@ export interface operations {
             content: {
                 "application/json": {
                     args?: string;
+                    metadata?: {
+                        [key: string]: unknown;
+                    };
                     attachments?: ({
+                        /** @enum {string} */
+                        type: "text";
+                        text: string;
+                    } | {
                         /** @enum {string} */
                         type: "image";
                         source: {
@@ -10588,6 +10657,9 @@ export interface operations {
                                     signature?: string;
                                 })[];
                                 created_at: unknown;
+                                metadata?: {
+                                    [key: string]: unknown;
+                                };
                             } | null;
                             queued: {
                                 prompt_id: string;
@@ -10679,6 +10751,9 @@ export interface operations {
                                     signature?: string;
                                 })[];
                                 created_at: unknown;
+                                metadata?: {
+                                    [key: string]: unknown;
+                                };
                             }[];
                         };
                         request_id: string;
@@ -10916,6 +10991,9 @@ export interface operations {
                                 signature?: string;
                             })[];
                             created_at: unknown;
+                            metadata?: {
+                                [key: string]: unknown;
+                            };
                         };
                         request_id: string;
                         details?: unknown;
@@ -10930,45 +11008,6 @@ export interface operations {
                             path: string;
                             message: string;
                         }[] | null;
-                    } | {
-                        /** @enum {number} */
-                        code: 40110;
-                        msg: string;
-                        /** @enum {string|null} */
-                        data: null;
-                        request_id: string;
-                        details?: unknown;
-                    } | {
-                        /** @enum {number} */
-                        code: 40111;
-                        msg: string;
-                        /** @enum {string|null} */
-                        data: null;
-                        request_id: string;
-                        details?: {
-                            provider_id: string;
-                        } | null;
-                    } | {
-                        /** @enum {number} */
-                        code: 40112;
-                        msg: string;
-                        /** @enum {string|null} */
-                        data: null;
-                        request_id: string;
-                        details?: {
-                            provider_id: string;
-                        } | null;
-                    } | {
-                        /** @enum {number} */
-                        code: 40113;
-                        msg: string;
-                        /** @enum {string|null} */
-                        data: null;
-                        request_id: string;
-                        details?: {
-                            model_id?: string;
-                            provider_id?: string;
-                        } | null;
                     } | {
                         /** @enum {number} */
                         code: 40401;
@@ -10991,16 +11030,6 @@ export interface operations {
                         msg: string;
                         /** @enum {string|null} */
                         data: null;
-                        request_id: string;
-                        details?: unknown;
-                    } | {
-                        /** @enum {number} */
-                        code: 40903;
-                        msg: string;
-                        data: {
-                            /** @enum {boolean} */
-                            aborted: false;
-                        };
                         request_id: string;
                         details?: unknown;
                     } | {
@@ -11141,16 +11170,6 @@ export interface operations {
                         msg: string;
                         /** @enum {string|null} */
                         data: null;
-                        request_id: string;
-                        details?: unknown;
-                    } | {
-                        /** @enum {number} */
-                        code: 40903;
-                        msg: string;
-                        data: {
-                            /** @enum {boolean} */
-                            aborted: false;
-                        };
                         request_id: string;
                         details?: unknown;
                     };

@@ -974,6 +974,18 @@ export const useApp = create<AppState>((set) => ({
           }
           break
         }
+        case 'subagent.cancelled': {
+          // 2.0+: stopped/timed-out subagents report cancelled (was failed/aborted).
+          const sid = p.subagentId as string
+          const rec = next.subagents[sid]
+          if (rec) {
+            next.subagents = {
+              ...next.subagents,
+              [sid]: { ...rec, status: 'cancelled' },
+            }
+          }
+          break
+        }
         case 'context.spliced': {
           if (!isMain) break // subagent transcripts stay out of the main history
           const start = p.start as number

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **`/usage` speaks kimi 2.0's quota shape** — 2.0 restructured `oauth/usage` (old snake_case `summary`/`limits` → camelCase `quota.usages`/`extraUsage` with 0..1 ratios), which silently broke the command into "usage unavailable". The parser now dual-reads both shapes, so it works on 0.30+ and 2.x daemons alike.
+- **Cancelled subagents no longer render as running forever** — 2.0 reports stopped/timed-out subagents via a new `subagent.cancelled` frame (and `cancelled` phase); the reducer marks the record and the panel shows a neutral dot + "cancelled" label instead of an eternal pulse.
+
+### Changed
+
+- **Verified against kimi-code 2.0.2** — isolated-daemon drill (0.42.0 → 2.0.2, clean-session smoke 13/13): the major bump is product-level — zero route adds/removes, zero WS message-set changes. The only protocol break was the `oauth/usage` restructure (fixed above); WS gains `subagent.cancelled`; everything else is additive (`agent_id` on approvals/questions, prompt `metadata`, skill `scopes`, `api_key_env` providers, MCP `deferred`, transcript `clientMetadata`). Reference specs and generated types now track 2.0.2.
+
 ## v0.1.17
 
 ### Added

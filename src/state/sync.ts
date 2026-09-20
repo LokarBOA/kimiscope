@@ -596,14 +596,57 @@ export async function runSlashCommand(id: string, raw: string): Promise<SlashRes
       case 'usage': {
         const u = await get<{
           kind: string
+          // kimi 2.0+ shape (camelCase quota tree)
+          quota?: {
+            usages?: Record<string, { usedRatio?: number; resetAt?: string } | undefined>
+            extraUsage?: {
+              balanceCents?: number
+              monthlyChargeLimitEnabled?: boolean
+              monthlyChargeLimitCents?: number
+              monthlyUsedCents?: number
+              currency?: string
+            } | null
+          }
+          // ≤0.42 shape
           summary?: { window: { duration: number; unit: string }; used: number; limit: number; reset_at?: string }
           limits?: { window: { duration: number; unit: string }; used: number; limit: number; reset_at?: string }[]
           extra_usage?: { monthly_used_cents: number; monthly_charge_limit_cents: number }
         }>('/oauth/usage').catch(() => null)
-        if (u?.kind !== 'ok' || !u.summary) {
+        if (u?.kind !== 'ok' || (!u.quota && !u.summary)) {
           return { handled: true, notice: 'usage unavailable (needs kimi 0.30+ with a managed account)' }
         }
-        const parts = [`${u.summary.used}% of the ${u.summary.window.duration}-${u.summary.window.unit} window`]
+        const fmtReset = (iso?: string) =>
+          iso
+            ? ` · resets ${new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+            : ''
+        if (u.quota) {
+          // 2.0+: usage windows are keyed (limit5h/limit7d/monthTotal/monthCode);
+          // usedRatio is a 0..1 fraction.
+          const labels: Record<string, string> = {
+            limit5h: '5h',
+            limit7d: '7d',
+            monthTotal: 'monthly',
+            monthCode: 'monthly code',
+          }
+          type UsageWindow = { usedRatio?: number; resetAt?: string }
+          const usages: Record<string, UsageWindow> = u.quota.usages ?? {}
+          const entries = Object.entries(usages).filter(([, v]) => v != null)
+          if (entries.length === 0) {
+            return { handled: true, notice: 'usage unavailable (needs kimi 0.30+ with a managed account)' }
+          }
+          const parts = entries.map(
+            ([k, v]) => `${Math.round((v?.usedRatio ?? 0) * 100)}% of the ${labels[k] ?? k} window`,
+          )
+          const ex = u.quota.extraUsage
+          if (ex && (ex.monthlyChargeLimitCents ?? 0) > 0) {
+            parts.push(
+              `extra usage $${((ex.monthlyUsedCents ?? 0) / 100).toFixed(2)} of $${((ex.monthlyChargeLimitCents ?? 0) / 100).toFixed(2)}`,
+            )
+          }
+          const reset = u.quota.usages?.limit7d?.resetAt ?? entries[0]?.[1]?.resetAt
+          return { handled: true, notice: `usage: ${parts.join(' · ')}${fmtReset(reset)}` }
+        }
+        const parts = [`${u.summary!.used}% of the ${u.summary!.window.duration}-${u.summary!.window.unit} window`]
         for (const l of u.limits ?? []) {
           parts.push(`${l.used}% of ${l.window.duration}${l.window.unit} rate limit`)
         }
@@ -612,10 +655,7 @@ export async function runSlashCommand(id: string, raw: string): Promise<SlashRes
             `extra usage $${(u.extra_usage.monthly_used_cents / 100).toFixed(2)} of $${(u.extra_usage.monthly_charge_limit_cents / 100).toFixed(2)}`,
           )
         }
-        const reset = u.summary.reset_at
-          ? ` · resets ${new Date(u.summary.reset_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
-          : ''
-        return { handled: true, notice: `usage: ${parts.join(' · ')}${reset}` }
+        return { handled: true, notice: `usage: ${parts.join(' · ')}${fmtReset(u.summary!.reset_at)}` }
       }
       case 'export': {
         const filename = await exportSession(id)

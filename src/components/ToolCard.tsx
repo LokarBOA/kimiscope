@@ -221,9 +221,16 @@ function SubagentPanel({
     <div className="mt-2 space-y-1 border-l-2 border-violet-800/60 pl-3">
       <div className="flex items-center gap-2 text-[12px]">
         <span
-          className={`h-1.5 w-1.5 rounded-full ${sub.status === 'running' ? 'animate-pulse bg-violet-400' : 'bg-emerald-500'}`}
+          className={`h-1.5 w-1.5 rounded-full ${
+            sub.status === 'running'
+              ? 'animate-pulse bg-violet-400'
+              : sub.status === 'cancelled'
+                ? 'bg-zinc-500'
+                : 'bg-emerald-500'
+          }`}
         />
         <span className="font-medium text-violet-300">{sub.name}</span>
+        {sub.status === 'cancelled' && <span className="text-[10px] text-zinc-500 uppercase">cancelled</span>}
         {sub.model && (
           <span
             className="rounded bg-zinc-800 px-1.5 py-px text-[10px] text-zinc-400"
