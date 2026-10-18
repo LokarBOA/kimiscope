@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Verified against kimi-code 2.2.0** — isolated-daemon drill (2.0.2 → 2.2.0, clean-session smoke 13/13): REST +3 (remote-control device list/rename/delete/deactivate). Breaks confined to surfaces the app doesn't consume (transcript `timing` → `llmTiming` rename, `userinfo.goodsVersion` retype, MCP `kaos` removal) — types regen covers them. NotifyUser progress updates carry no new WS frame, so there's nothing new to render. Reference specs and generated types now track 2.2.0.
+
 ## v0.1.18
 
 ### Fixed

@@ -363,6 +363,14 @@ export interface paths {
                             };
                             request_id: string;
                             details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 50001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
                         };
                     };
                 };
@@ -496,7 +504,7 @@ export interface paths {
                                     userLevelName: string;
                                     domain: number;
                                     domainName: string;
-                                    goodsVersion?: string;
+                                    goodsVersion?: number;
                                     globalId?: string;
                                     bio?: string;
                                     avatar?: string;
@@ -624,6 +632,7 @@ export interface paths {
                                 yolo?: boolean;
                                 default_permission_mode?: string;
                                 default_plan_mode?: boolean;
+                                auto_session_title?: boolean;
                                 permission?: unknown;
                                 hooks?: unknown[];
                                 services?: unknown;
@@ -675,6 +684,7 @@ export interface paths {
                         yolo?: boolean;
                         default_permission_mode?: string;
                         default_plan_mode?: boolean;
+                        auto_session_title?: boolean;
                         permission?: unknown;
                         hooks?: unknown[];
                         services?: unknown;
@@ -723,6 +733,7 @@ export interface paths {
                                 yolo?: boolean;
                                 default_permission_mode?: string;
                                 default_plan_mode?: boolean;
+                                auto_session_title?: boolean;
                                 permission?: unknown;
                                 hooks?: unknown[];
                                 services?: unknown;
@@ -3709,6 +3720,13 @@ export interface paths {
                                 device_id?: string;
                                 device_name?: string;
                                 error?: string;
+                                conflict?: {
+                                    pid: number;
+                                    local_origin: string;
+                                    device_id: string;
+                                    url: string;
+                                    started_at: number;
+                                };
                             };
                             request_id: string;
                             details?: unknown;
@@ -3752,6 +3770,13 @@ export interface paths {
                                 device_id?: string;
                                 device_name?: string;
                                 error?: string;
+                                conflict?: {
+                                    pid: number;
+                                    local_origin: string;
+                                    device_id: string;
+                                    url: string;
+                                    started_at: number;
+                                };
                             };
                             request_id: string;
                             details?: unknown;
@@ -3766,6 +3791,259 @@ export interface paths {
                         } | {
                             /** @enum {number} */
                             code: 40928;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                pid: number;
+                                local_origin: string;
+                                device_id: string;
+                                url: string;
+                                started_at: number;
+                            } | null;
+                        } | {
+                            /** @enum {number} */
+                            code: 50001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/remote-control/devices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description List Remote Control devices */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                devices: {
+                                    device_id: string;
+                                    alias: string;
+                                    /** @enum {string} */
+                                    status: "online" | "offline";
+                                    platform: string;
+                                    client_version: string;
+                                    local_base_url: string;
+                                    created_at: string;
+                                    updated_at: string;
+                                    last_remote_access_at: string;
+                                }[];
+                                max_devices?: number;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 50001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/remote-control/devices/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** @description Delete a Remote Control device */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                /** @enum {boolean} */
+                                ok: true;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 50001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** @description Rename a Remote Control device */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        alias: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                /** @enum {boolean} */
+                                ok: true;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 50001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/remote-control/devices/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Deactivate a Remote Control device */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                /** @enum {boolean} */
+                                ok: true;
+                            };
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
                             msg: string;
                             /** @enum {string|null} */
                             data: null;
@@ -5917,7 +6195,7 @@ export interface paths {
                                             inputCacheCreation: number;
                                         };
                                         finishReason?: string;
-                                        timing?: {
+                                        llmTiming?: {
                                             llmFirstTokenLatencyMs?: number;
                                             llmStreamDurationMs?: number;
                                             llmRequestBuildMs?: number;
@@ -6384,7 +6662,7 @@ export interface paths {
                                                         inputCacheCreation: number;
                                                     };
                                                     finishReason?: string;
-                                                    timing?: {
+                                                    llmTiming?: {
                                                         llmFirstTokenLatencyMs?: number;
                                                         llmStreamDurationMs?: number;
                                                         llmRequestBuildMs?: number;
@@ -6696,7 +6974,7 @@ export interface paths {
                                                 inputCacheCreation: number;
                                             };
                                             finishReason?: string;
-                                            timing?: {
+                                            llmTiming?: {
                                                 llmFirstTokenLatencyMs?: number;
                                                 llmStreamDurationMs?: number;
                                                 llmRequestBuildMs?: number;
@@ -7705,7 +7983,7 @@ export interface paths {
                                     };
                                     cwd?: string;
                                     /** @enum {string} */
-                                    executor?: "local" | "kaos";
+                                    executor?: "local";
                                     runtime_id?: string;
                                     enabled?: boolean;
                                     deferred?: boolean;
@@ -7801,7 +8079,7 @@ export interface paths {
                         };
                         cwd?: string;
                         /** @enum {string} */
-                        executor?: "local" | "kaos";
+                        executor?: "local";
                         runtime_id?: string;
                         enabled?: boolean;
                         deferred?: boolean;
@@ -7872,7 +8150,7 @@ export interface paths {
                                     };
                                     cwd?: string;
                                     /** @enum {string} */
-                                    executor?: "local" | "kaos";
+                                    executor?: "local";
                                     runtime_id?: string;
                                     enabled?: boolean;
                                     deferred?: boolean;
@@ -7994,7 +8272,7 @@ export interface paths {
                                     };
                                     cwd?: string;
                                     /** @enum {string} */
-                                    executor?: "local" | "kaos";
+                                    executor?: "local";
                                     runtime_id?: string;
                                     enabled?: boolean;
                                     deferred?: boolean;
@@ -8099,7 +8377,7 @@ export interface paths {
                         };
                         cwd?: string;
                         /** @enum {string} */
-                        executor?: "local" | "kaos";
+                        executor?: "local";
                         runtime_id?: string;
                         enabled?: boolean;
                         deferred?: boolean;
@@ -8167,7 +8445,7 @@ export interface paths {
                                     };
                                     cwd?: string;
                                     /** @enum {string} */
-                                    executor?: "local" | "kaos";
+                                    executor?: "local";
                                     runtime_id?: string;
                                     enabled?: boolean;
                                     deferred?: boolean;
@@ -8285,7 +8563,7 @@ export interface paths {
                                     };
                                     cwd?: string;
                                     /** @enum {string} */
-                                    executor?: "local" | "kaos";
+                                    executor?: "local";
                                     runtime_id?: string;
                                     enabled?: boolean;
                                     deferred?: boolean;
@@ -8402,7 +8680,7 @@ export interface paths {
                             };
                             cwd?: string;
                             /** @enum {string} */
-                            executor?: "local" | "kaos";
+                            executor?: "local";
                             runtime_id?: string;
                             enabled?: boolean;
                             deferred?: boolean;
@@ -8570,7 +8848,7 @@ export interface paths {
                                     };
                                     cwd?: string;
                                     /** @enum {string} */
-                                    executor?: "local" | "kaos";
+                                    executor?: "local";
                                     runtime_id?: string;
                                     enabled?: boolean;
                                     deferred?: boolean;
@@ -11367,6 +11645,7 @@ export interface operations {
                     /** @default true */
                     follow_gitignore?: boolean;
                     exclude_globs?: string[];
+                    allow_ignored_globs?: string[];
                     /**
                      * @default type_first
                      * @enum {string}
