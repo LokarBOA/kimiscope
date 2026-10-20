@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
-import { get } from '../api/client'
+import { api, get } from '../api/client'
 
 interface AccountInfo {
   nickname: string
@@ -55,6 +55,24 @@ interface DaemonServer {
   tool_count: number
 }
 
+/** kimi 2.2+ remote-control device registry (routes 404 on older daemons). */
+interface RcDevice {
+  device_id: string
+  alias: string
+  status: 'online' | 'offline'
+  platform: string
+  client_version: string
+  last_remote_access_at?: string
+}
+
+interface RcStatus {
+  enabled: boolean
+  state: 'off' | 'starting' | 'on' | 'stopping'
+  url?: string
+  device_name?: string
+  error?: string
+}
+
 export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [servers, setServers] = useState<Record<string, McpEntry> | null>(null)
   const [daemonServers, setDaemonServers] = useState<Record<string, DaemonServer>>({})
@@ -65,6 +83,8 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     () => localStorage.getItem('kimiscope.permissionMode') ?? 'yolo',
   )
   const [account, setAccount] = useState<AccountInfo | null>(null)
+  const [rcStatus, setRcStatus] = useState<RcStatus | null>(null)
+  const [rcDevices, setRcDevices] = useState<RcDevice[] | null>(null)
 
   async function load() {
     const j = await invoke<{ mcpServers?: Record<string, McpEntry> }>('get_mcp_servers').catch(
@@ -78,6 +98,39 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     const map: Record<string, DaemonServer> = {}
     for (const s of ds?.servers ?? []) map[s.name] = s
     setDaemonServers(map)
+    // Remote control (2.2+): the devices route 404s on older daemons — hide.
+    const rc = await get<RcStatus>('/remote-control').catch(() => null)
+    setRcStatus(rc)
+    if (rc) {
+      const devs = await get<{ devices?: RcDevice[] }>('/remote-control/devices').catch(() => null)
+      setRcDevices(devs ? (devs.devices ?? []) : null)
+    } else {
+      setRcDevices(null)
+    }
+  }
+
+  async function renameRcDevice(d: RcDevice) {
+    const alias = window.prompt(`Rename device "${d.alias}"`, d.alias)?.trim()
+    if (!alias || alias === d.alias) return
+    try {
+      await api(`/remote-control/devices/${d.device_id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ alias: alias.slice(0, 50) }),
+      })
+      await load()
+    } catch (e) {
+      alert(`rename failed: ${e}`)
+    }
+  }
+
+  async function deactivateRcDevice(d: RcDevice) {
+    if (!window.confirm(`Deactivate "${d.alias}" (${d.platform})?\nIt loses remote access until it signs in again.`)) return
+    try {
+      await api(`/remote-control/devices/${d.device_id}/deactivate`, { method: 'POST' })
+      await load()
+    } catch (e) {
+      alert(`deactivate failed: ${e}`)
+    }
   }
   useEffect(() => {
     void load()
@@ -223,6 +276,59 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         </div>
+
+        {rcStatus !== null && rcDevices !== null && (
+          <div className="mb-4">
+            <div className="mb-1.5 text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">
+              Remote Control
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 rounded-md border border-zinc-800 px-3 py-2 text-[13px]">
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${rcStatus.state === 'on' ? 'bg-emerald-500' : 'bg-zinc-600'}`}
+                />
+                <span className="text-zinc-300">
+                  tunnel {rcStatus.state}
+                  {rcStatus.state === 'on' && rcStatus.url ? ` — ${rcStatus.url}` : ''}
+                </span>
+                {rcStatus.device_name && (
+                  <span className="ml-auto text-[11px] text-zinc-500">{rcStatus.device_name}</span>
+                )}
+              </div>
+              {rcDevices.map((d) => (
+                <div
+                  key={d.device_id}
+                  className="flex items-center gap-2 rounded-md border border-zinc-800 px-3 py-2 text-[13px]"
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${d.status === 'online' ? 'bg-emerald-500' : 'bg-zinc-600'}`}
+                  />
+                  <span className="min-w-0 flex-1 truncate text-zinc-200">{d.alias}</span>
+                  <span className="text-[11px] text-zinc-500">
+                    {d.platform} · {d.client_version}
+                  </span>
+                  <button
+                    onClick={() => void renameRcDevice(d)}
+                    title="Rename device"
+                    className="rounded px-1 text-[11px] text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    onClick={() => void deactivateRcDevice(d)}
+                    title="Deactivate — revokes remote access until it signs in again"
+                    className="rounded px-1 text-[11px] text-zinc-500 hover:bg-zinc-800 hover:text-red-400"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              {rcDevices.length === 0 && (
+                <div className="px-1 text-[11px] text-zinc-600">No devices registered.</div>
+              )}
+            </div>
+          </div>
+        )}
 
         <div>
           <div className="mb-1.5 text-[11px] font-semibold tracking-wider text-zinc-500 uppercase">

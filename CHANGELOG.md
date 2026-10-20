@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- **Remote Control device management (kimi 2.2+)** — Settings gains a Remote Control section: tunnel state line plus the registered device list (alias, platform, version, online dot) with per-device ✎ rename and ✕ deactivate, backed by the new `/remote-control/devices` routes. The section hides itself entirely on daemons that can't list devices (older versions, or RC without a Kimi login).
+- **Declined subscribes are no longer silent** — a 2.0.2-era concurrent-viewer decline (`accepted_subscriptions: []` instead of `accepted`) would previously pass as a successful subscribe and the session would simply never stream. The ack parser now accepts both field spellings, treats "not accepted and not not_found/resync" as a decline, falls back to transcript history, and puts a "live stream declined — session may be open in another client" warning in the top bar.
+
 ### Changed
 
 - **Verified against kimi-code 2.2.0** — isolated-daemon drill (2.0.2 → 2.2.0, clean-session smoke 13/13): REST +3 (remote-control device list/rename/delete/deactivate). Breaks confined to surfaces the app doesn't consume (transcript `timing` → `llmTiming` rename, `userinfo.goodsVersion` retype, MCP `kaos` removal) — types regen covers them. NotifyUser progress updates carry no new WS frame, so there's nothing new to render. Reference specs and generated types now track 2.2.0.

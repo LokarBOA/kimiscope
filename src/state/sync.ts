@@ -924,8 +924,15 @@ export async function watchSession(id: string): Promise<void> {
       session_ids: [id],
       cursors: { [id]: { seq: snap.as_of_seq, epoch: snap.epoch } },
     })
+    // Ack dialects: current daemons answer {accepted, not_found,
+    // resync_required, cursors}; a 2.0.2 concurrent-viewer decline was observed
+    // in the wild as {accepted_subscriptions: [], resync_required: [], cursors: {}}
+    // (probe-ouroboros, 2026-09-25 — not reproducible on a clean daemon).
+    // Accept either field name; treat "named but not accepted and not
+    // not_found/resync" as a decline: history renders, live stream doesn't.
     const p = ack.payload as {
       accepted?: string[]
+      accepted_subscriptions?: string[]
       not_found?: string[]
       resync_required?: string[]
     }
@@ -940,6 +947,19 @@ export async function watchSession(id: string): Promise<void> {
       // from the wire log via /transcript — use it when present.
       console.warn('session not streamable by daemon:', id)
       void pullTranscript(id)
+    }
+    const acceptedList = p.accepted ?? p.accepted_subscriptions
+    if (acceptedList && !acceptedList.includes(id) && !p.not_found?.includes(id)) {
+      // Silently declined — observed when another client held the session
+      // (concurrent-viewer single-stream rule). History stays readable via
+      // transcript; make the missing live stream visible instead of silent.
+      console.warn('subscribe declined for', id, JSON.stringify(p))
+      void pullTranscript(id)
+      useApp.getState().setSyncIssue(
+        `live stream declined for ${id.slice(8, 16)} — the session may be open in another client; history still updates`,
+      )
+      useApp.getState().markSynced(id)
+      return
     }
     useApp.getState().markSynced(id)
     useApp.getState().setSyncIssue(null)
