@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Verified against kimi-code 2.3.1** — isolated-daemon drill (2.2.0 → 2.3.1, clean-session smoke 13/13 + occupancy probe): fully additive. REST +4 (`client_configs`, session `rating`, `:reload`, `:takeover`). Session locking arrives via new `session.occupied`/`session.stale` error literals + REST 40931/40932 on mutating calls — but a live probe showed REST prompts accepted regardless of the lock, so no takeover UI for now (generic error tolerance already covers it). Reference specs and generated types now track 2.3.1; no app changes required.
+
 ## v0.1.19
 
 ### Added

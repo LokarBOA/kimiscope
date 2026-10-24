@@ -646,6 +646,7 @@ export interface paths {
                                     [key: string]: boolean;
                                 };
                                 telemetry?: boolean;
+                                disable_feedback_survey?: boolean;
                                 raw?: {
                                     [key: string]: unknown;
                                 };
@@ -698,6 +699,7 @@ export interface paths {
                             [key: string]: boolean;
                         };
                         telemetry?: boolean;
+                        disable_feedback_survey?: boolean;
                     };
                 };
             };
@@ -747,6 +749,7 @@ export interface paths {
                                     [key: string]: boolean;
                                 };
                                 telemetry?: boolean;
+                                disable_feedback_survey?: boolean;
                                 raw?: {
                                     [key: string]: unknown;
                                 };
@@ -761,6 +764,58 @@ export interface paths {
                             msg: string;
                             /** @enum {string|null} */
                             data: null;
+                            request_id: string;
+                            details?: unknown;
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/client_configs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Fetch a named cloud-controlled client configuration */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                name: string;
+                                config: unknown;
+                            };
                             request_id: string;
                             details?: unknown;
                         };
@@ -810,6 +865,11 @@ export interface paths {
                                     capabilities?: string[];
                                     support_efforts?: string[];
                                     default_effort?: string;
+                                    upgrade?: {
+                                        model: string;
+                                        migration_markdown: string;
+                                        retirement_at?: string;
+                                    };
                                 }[];
                             };
                             request_id: string;
@@ -1719,6 +1779,22 @@ export interface paths {
                             data: null;
                             request_id: string;
                             details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40931;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40932;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
                         };
                     };
                 };
@@ -1785,6 +1861,22 @@ export interface paths {
                         } | {
                             /** @enum {number} */
                             code: 40923;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40931;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40932;
                             msg: string;
                             /** @enum {string|null} */
                             data: null;
@@ -2053,6 +2145,22 @@ export interface paths {
                             data: null;
                             request_id: string;
                             details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40931;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40932;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: unknown;
                         };
                     };
                 };
@@ -2290,6 +2398,90 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/rating": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Evaluate the latest completed transcript turn, or report a displayed rating and its final answer */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    session_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        op: "evaluate";
+                        turn_id: string;
+                    } | {
+                        /** @enum {string} */
+                        op: "shown";
+                        appearance_id: string;
+                    } | {
+                        /** @enum {string} */
+                        op: "respond";
+                        appearance_id: string;
+                        /** @enum {string} */
+                        response: "bad" | "fine" | "good" | "dismissed";
+                    } | {
+                        /** @enum {string} */
+                        op: "abandon";
+                        appearance_id: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {number} */
+                            code: 0;
+                            msg: string;
+                            data: {
+                                appearance: {
+                                    id: string;
+                                    /** @enum {string} */
+                                    survey: "session" | "long_context";
+                                } | null;
+                            } | null;
+                            request_id: string;
+                            details?: unknown;
+                        } | {
+                            /** @enum {number} */
+                            code: 40001;
+                            msg: string;
+                            /** @enum {string|null} */
+                            data: null;
+                            request_id: string;
+                            details?: {
+                                path: string;
+                                message: string;
+                            }[] | null;
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -9480,6 +9672,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sessions/{session_id}:reload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Run a session action */
+        post: operations["runSessionReloadAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}:takeover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Run a session action */
+        post: operations["runSessionTakeoverAction"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -9523,6 +9749,11 @@ export interface operations {
                                 capabilities?: string[];
                                 support_efforts?: string[];
                                 default_effort?: string;
+                                upgrade?: {
+                                    model: string;
+                                    migration_markdown: string;
+                                    retirement_at?: string;
+                                };
                             };
                         };
                         request_id: string;
@@ -9822,6 +10053,11 @@ export interface operations {
                                 provider: string;
                                 reason: string;
                             }[];
+                            retired_default?: {
+                                from: string;
+                                to: string;
+                                from_display_name: string;
+                            };
                         } | {
                             provider: {
                                 id: string;
@@ -9940,6 +10176,11 @@ export interface operations {
                                 provider: string;
                                 reason: string;
                             }[];
+                            retired_default?: {
+                                from: string;
+                                to: string;
+                                from_display_name: string;
+                            };
                         };
                         request_id: string;
                         details?: unknown;
@@ -10318,6 +10559,22 @@ export interface operations {
                     } | {
                         /** @enum {number} */
                         code: 40912;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40931;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40932;
                         msg: string;
                         /** @enum {string|null} */
                         data: null;
@@ -11321,6 +11578,22 @@ export interface operations {
                     } | {
                         /** @enum {number} */
                         code: 40927;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40931;
+                        msg: string;
+                        /** @enum {string|null} */
+                        data: null;
+                        request_id: string;
+                        details?: unknown;
+                    } | {
+                        /** @enum {number} */
+                        code: 40932;
                         msg: string;
                         /** @enum {string|null} */
                         data: null;
@@ -12480,6 +12753,154 @@ export interface operations {
                         data: {
                             /** @enum {boolean} */
                             deleted: true;
+                        } | null;
+                        request_id: string;
+                        details?: unknown;
+                        stack?: string;
+                    };
+                };
+            };
+        };
+    };
+    runSessionReloadAction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title?: string;
+                    metadata?: {
+                        [key: string]: unknown;
+                    };
+                    instruction?: string;
+                    count?: number;
+                    page_size?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Session reload response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: number;
+                        msg: string;
+                        data: {
+                            id: string;
+                            workspace_id: string;
+                            title: string;
+                            created_at: unknown;
+                            updated_at: unknown;
+                            busy: boolean;
+                            main_turn_active?: boolean;
+                            /** @enum {string} */
+                            pending_interaction?: "none" | "approval" | "question";
+                            /** @enum {string} */
+                            last_turn_reason?: "completed" | "cancelled" | "failed";
+                            archived?: boolean;
+                            archived_at?: unknown;
+                            current_prompt_id?: string;
+                            last_prompt?: string;
+                            metadata: {
+                                cwd: string;
+                            } & {
+                                [key: string]: unknown;
+                            };
+                            agent_config: {
+                                model: string;
+                                system_prompt?: string;
+                                tools?: string[];
+                                mcp_servers?: string[];
+                                thinking?: string;
+                                /** @enum {string} */
+                                permission_mode?: "manual" | "yolo" | "auto";
+                                plan_mode?: boolean;
+                                swarm_mode?: boolean;
+                                tower_mode?: boolean;
+                                tower_base?: string;
+                                goal_objective?: string;
+                                /** @enum {string} */
+                                goal_control?: "pause" | "resume" | "cancel";
+                            };
+                            usage: {
+                                input_tokens: number;
+                                output_tokens: number;
+                                cache_read_tokens: number;
+                                cache_creation_tokens: number;
+                                total_cost_usd?: number;
+                                context_tokens: number;
+                                context_limit?: number;
+                                turn_count?: number;
+                            };
+                            permission_rules: {
+                                id: string;
+                                tool_name: string;
+                                matcher?: {
+                                    /** @enum {string} */
+                                    kind: "command_prefix" | "path_glob" | "exact_input" | "always";
+                                    value?: string;
+                                };
+                                /** @enum {string} */
+                                decision: "approved";
+                                created_at: unknown;
+                                /** @enum {string} */
+                                created_by: "user" | "agent";
+                            }[];
+                            message_count: number;
+                            last_seq: number;
+                        } | null;
+                        request_id: string;
+                        details?: unknown;
+                        stack?: string;
+                    };
+                };
+            };
+        };
+    };
+    runSessionTakeoverAction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title?: string;
+                    metadata?: {
+                        [key: string]: unknown;
+                    };
+                    instruction?: string;
+                    count?: number;
+                    page_size?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Session lock takeover response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        code: number;
+                        msg: string;
+                        data: {
+                            /** @enum {boolean} */
+                            taken_over: true;
                         } | null;
                         request_id: string;
                         details?: unknown;
