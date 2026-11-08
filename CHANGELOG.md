@@ -1,10 +1,13 @@
 # Changelog
 
-## Unreleased
+## v0.1.20 — FINAL (2026-11-08)
+
+**⚠️ This is the last release of KimiScope. The project is no longer maintained.** The upstream publisher's own tools now cover this app's purpose, and kimi-code 2.5.0 removed the protocol the app is built on — a full migration wasn't worth it. Compatibility: **kimi-code ≤2.4.x** (smoke-verified 13/13 on 2.4.1). **2.5.x and later are not supported.**
 
 ### Changed
 
 - **Verified against kimi-code 2.3.1** — isolated-daemon drill (2.2.0 → 2.3.1, clean-session smoke 13/13 + occupancy probe): fully additive. REST +4 (`client_configs`, session `rating`, `:reload`, `:takeover`). Session locking arrives via new `session.occupied`/`session.stale` error literals + REST 40931/40932 on mutating calls — but a live probe showed REST prompts accepted regardless of the lock, so no takeover UI for now (generic error tolerance already covers it). Reference specs and generated types now track 2.3.1; no app changes required.
+- **Compatibility ceiling documented (2.4.1 / 2.5.x)** — 2.4.1 smoke-verified as the last supported version. The 2.5.x removals are inventoried in AGENTS.md for anyone who wants to fork and migrate (subscribe_v2 + WS agent/goal/todo/usage/task frames; snapshot, status, runtime, approvals, tasks, terminals, add-dir all removed upstream).
 
 ## v0.1.19
 

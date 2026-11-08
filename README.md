@@ -1,5 +1,7 @@
 # KimiScope
 
+> **⚠️ Unmaintained — final release v0.1.20 (2026-11-08).** This project is no longer being updated. The publisher's own tools now cover its purpose, and kimi-code 2.5.0 removed the protocol it was built on. **Requires kimi-code ≤2.4.x** (verified on 2.4.1); **2.5.x and later will not work.** See `AGENTS.md` for the full 2.5.x incompatibility inventory if you want to fork and migrate.
+
 **A window into Kimi, built by Kimi.**
 
 KimiScope is a standalone desktop app for [Kimi Code](https://www.kimi.com/code) — a rich, reliable UI on top of the kimi daemon's local REST + WebSocket API. Sessions live in the daemon; the window is a disposable renderer.
